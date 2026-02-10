@@ -1,6 +1,9 @@
 services:
   dashboard:
-    build: .
+    build:
+      context: .
+      args:
+        APP_VERSION: "${APP_VERSION:-unknown}"
     container_name: memory-bank-dashboard
     restart: unless-stopped
     ports:

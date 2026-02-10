@@ -7,6 +7,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+ARG APP_VERSION=unknown
+RUN echo "${APP_VERSION}" > .version
+
 ENV HOST=0.0.0.0
 ENV PORT=5000
 ENV FLASK_DEBUG=0

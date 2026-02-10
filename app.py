@@ -13,13 +13,26 @@ _base = os.path.dirname(os.path.abspath(__file__))
 
 
 def _git_version():
+    # 1. Explicit env var (set by Docker / CI)
+    env = os.environ.get("APP_VERSION", "").strip()
+    if env:
+        return env
+    # 2. Live git
     try:
         return subprocess.check_output(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=_base, stderr=subprocess.DEVNULL, text=True,
         ).strip()
     except Exception:
-        return "unknown"
+        pass
+    # 3. .version file (baked into Docker image)
+    version_file = os.path.join(_base, ".version")
+    if os.path.isfile(version_file):
+        with open(version_file) as f:
+            v = f.read().strip()
+            if v:
+                return v
+    return "unknown"
 
 
 APP_VERSION = _git_version()
