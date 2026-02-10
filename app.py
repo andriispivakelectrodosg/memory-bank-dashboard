@@ -1,5 +1,6 @@
 """Memory Bank Dashboard -- Read-Only Flask App"""
 import os
+import subprocess
 
 from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, abort
@@ -9,6 +10,19 @@ load_dotenv()
 app = Flask(__name__)
 
 _base = os.path.dirname(os.path.abspath(__file__))
+
+
+def _git_version():
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=_base, stderr=subprocess.DEVNULL, text=True,
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+APP_VERSION = _git_version()
 
 
 def _dir(env_key, *default_parts):
@@ -60,7 +74,7 @@ def _list_md(directory, exclude=None):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", version=APP_VERSION)
 
 
 @app.route("/api/files")
