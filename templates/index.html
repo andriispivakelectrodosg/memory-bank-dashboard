@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Bank Dashboard</title>
+    <style>
+        :root, [data-theme="light"] {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-sidebar: #1e293b;
+            --text-primary: #1a1a2e;
+            --text-secondary: #64748b;
+            --text-sidebar: #94a3b8;
+            --text-sidebar-active: #ffffff;
+            --border-color: #e2e8f0;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --sidebar-active-bg: rgba(59, 130, 246, 0.2);
+            --code-bg: #f1f5f9;
+            --table-stripe: #f8fafc;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-sidebar: #0c1222;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-sidebar: #64748b;
+            --text-sidebar-active: #e2e8f0;
+            --border-color: #334155;
+            --accent: #60a5fa;
+            --accent-hover: #3b82f6;
+            --sidebar-active-bg: rgba(96, 165, 250, 0.15);
+            --code-bg: #1e293b;
+            --table-stripe: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.65rem 1.5rem;
+            background: var(--bg-sidebar);
+            color: #e2e8f0;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .header-btn {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #cbd5e1;
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .header-btn:hover {
+            background: rgba(255,255,255,0.15);
+            color: #fff;
+        }
+
+        .app-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 240px;
+            background: var(--bg-sidebar);
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: 0.75rem 0;
+            border-right: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .sidebar-heading {
+            padding: 0.6rem 1.25rem 0.35rem;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-sidebar);
+            font-weight: 700;
+        }
+
+        .sidebar-item {
+            display: block;
+            padding: 0.5rem 1.25rem;
+            color: var(--text-sidebar);
+            cursor: pointer;
+            transition: background 0.12s, color 0.12s;
+            font-size: 0.85rem;
+            border-left: 3px solid transparent;
+            user-select: none;
+        }
+
+        .sidebar-item:hover {
+            background: var(--sidebar-active-bg);
+            color: var(--text-sidebar-active);
+        }
+
+        .sidebar-item.active {
+            background: var(--sidebar-active-bg);
+            color: var(--text-sidebar-active);
+            border-left-color: var(--accent);
+            font-weight: 600;
+        }
+
+        .sidebar-item.task-item {
+            padding-left: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .sidebar-divider {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            margin: 0.6rem 1.25rem;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem 3rem;
+        }
+
+        .content-inner {
+            max-width: 860px;
+        }
+
+        .content-meta {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .breadcrumb {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .breadcrumb a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        .loading {
+            color: var(--text-secondary);
+            font-style: italic;
+            padding: 2rem 0;
+        }
+
+        .error {
+            color: #ef4444;
+            padding: 1rem;
+            background: rgba(239,68,68,0.08);
+            border-radius: 8px;
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+
+        /* Markdown body */
+        .markdown-body h1 {
+            font-size: 1.65rem;
+            margin: 0 0 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            font-weight: 700;
+        }
+
+        .markdown-body h2 {
+            font-size: 1.25rem;
+            margin: 1.75rem 0 0.6rem;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .markdown-body h3 {
+            font-size: 1.05rem;
+            margin: 1.25rem 0 0.5rem;
+            font-weight: 600;
+        }
+
+        .markdown-body p {
+            margin: 0.5rem 0;
+            line-height: 1.7;
+        }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5rem;
+            margin: 0.5rem 0;
+        }
+
+        .markdown-body li {
+            margin: 0.2rem 0;
+            line-height: 1.65;
+        }
+
+        .markdown-body strong {
+            font-weight: 600;
+        }
+
+        .markdown-body code {
+            background: var(--code-bg);
+            padding: 0.15em 0.4em;
+            border-radius: 4px;
+            font-size: 0.88em;
+            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+
+        .markdown-body pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85em;
+        }
+
+        .markdown-body table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 1rem 0;
+            font-size: 0.88rem;
+        }
+
+        .markdown-body th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            text-align: left;
+            padding: 0.55rem 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body td {
+            padding: 0.5rem 0.75rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .markdown-body tr:nth-child(even) {
+            background: var(--table-stripe);
+        }
+
+        .markdown-body blockquote {
+            border-left: 4px solid var(--accent);
+            padding: 0.5rem 1rem;
+            margin: 1rem 0;
+            background: var(--bg-secondary);
+            border-radius: 0 6px 6px 0;
+            color: var(--text-secondary);
+        }
+
+        .markdown-body hr {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            margin: 1.5rem 0;
+        }
+
+        .markdown-body a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .markdown-body a:hover {
+            text-decoration: underline;
+        }
+
+        .markdown-body input[type="checkbox"] {
+            margin-right: 0.4rem;
+            accent-color: var(--accent);
+        }
+
+        .task-link {
+            color: var(--accent) !important;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .task-link:hover {
+            text-decoration: underline !important;
+        }
+
+        /* Status badges */
+        .status-completed { color: #22c55e; }
+        .status-in-progress { color: #f59e0b; }
+        .status-pending { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>Memory Bank</h1>
+        <div class="header-actions">
+            <button class="header-btn" id="refresh-btn" title="Reload files">Refresh</button>
+            <button class="header-btn" id="theme-btn" title="Toggle dark/light theme">Theme</button>
+        </div>
+    </header>
+    <div class="app-container">
+        <nav class="sidebar" id="sidebar"></nav>
+        <main class="content">
+            <div class="content-inner">
+                <div id="content-meta" class="content-meta" style="display:none;"></div>
+                <article class="markdown-body" id="markdown-body">
+                    <div class="loading">Select a file from the sidebar.</div>
+                </article>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
+    <script>
+        const state = {
+            currentFile: null,
+            files: [],
+            tasks: [],
+            theme: localStorage.getItem('mb-theme') || 'light',
+        };
+
+        // --- Init ---
+        async function init() {
+            applyTheme(state.theme);
+            marked.setOptions({ gfm: true, breaks: false });
+            await loadManifest();
+            buildSidebar();
+            if (state.files.length > 0) {
+                loadFile(state.files[0].filename);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        // --- API ---
+        async function loadManifest() {
+            const [filesRes, tasksRes] = await Promise.all([
+                fetch('/api/files').then(r => r.json()),
+                fetch('/api/tasks').then(r => r.json()),
+            ]);
+            state.files = filesRes.files;
+            state.tasks = tasksRes.tasks;
+        }
+
+        async function loadFile(filename) {
+            state.currentFile = filename;
+            updateActiveState();
+
+            const body = document.getElementById('markdown-body');
+            const meta = document.getElementById('content-meta');
+            body.innerHTML = '<div class="loading">Loading...</div>';
+            meta.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/file/' + encodeURIComponent(filename));
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+
+                body.innerHTML = marked.parse(data.content);
+
+                // Show file path and last modified
+                const date = new Date(data.modified * 1000);
+                meta.textContent = filename + '  \u2014  last modified ' + date.toLocaleString();
+                meta.style.display = 'block';
+
+                // Breadcrumb for task detail pages
+                if (filename.startsWith('tasks/') && filename !== 'tasks/_index.md') {
+                    const bc = document.createElement('div');
+                    bc.className = 'breadcrumb';
+                    const a = document.createElement('a');
+                    a.href = '#';
+                    a.textContent = 'Tasks Index';
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        loadFile('tasks/_index.md');
+                    });
+                    bc.appendChild(a);
+                    bc.appendChild(document.createTextNode(' / ' + filename.split('/').pop().replace('.md', '')));
+                    body.prepend(bc);
+                }
+
+                // Linkify task references in the index
+                if (filename === 'tasks/_index.md') {
+                    linkifyTaskReferences(body);
+                }
+            } catch (err) {
+                body.innerHTML = '<div class="error">Failed to load ' + filename + ': ' + err.message + '</div>';
+            }
+        }
+
+        // --- Sidebar ---
+        function buildSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.innerHTML = '';
+
+            sidebar.appendChild(el('div', 'sidebar-heading', 'Core Files'));
+
+            state.files.forEach(function(f) {
+                const item = el('div', 'sidebar-item', f.label);
+                item.dataset.filename = f.filename;
+                item.addEventListener('click', function() { loadFile(f.filename); });
+                sidebar.appendChild(item);
+            });
+
+            sidebar.appendChild(el('div', 'sidebar-divider'));
+            sidebar.appendChild(el('div', 'sidebar-heading', 'Tasks'));
+
+            const indexItem = el('div', 'sidebar-item', 'Task Index');
+            indexItem.dataset.filename = 'tasks/_index.md';
+            indexItem.addEventListener('click', function() { loadFile('tasks/_index.md'); });
+            sidebar.appendChild(indexItem);
+
+            state.tasks.forEach(function(t) {
+                const item = el('div', 'sidebar-item task-item', t.label);
+                item.dataset.filename = t.filename;
+                item.addEventListener('click', function() { loadFile(t.filename); });
+                sidebar.appendChild(item);
+            });
+        }
+
+        function updateActiveState() {
+            document.querySelectorAll('.sidebar-item').forEach(function(item) {
+                item.classList.toggle('active', item.dataset.filename === state.currentFile);
+            });
+        }
+
+        // --- Task linkification ---
+        function linkifyTaskReferences(container) {
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) {
+                if (/\[TASK\d+\]/.test(walker.currentNode.textContent)) {
+                    nodes.push(walker.currentNode);
+                }
+            }
+            nodes.forEach(function(node) {
+                const html = node.textContent.replace(/\[(TASK\d+)\]/g, function(match, taskId) {
+                    const taskFile = state.tasks.find(function(t) {
+                        return t.filename.toUpperCase().includes(taskId);
+                    });
+                    if (taskFile) {
+                        return '<a href="#" class="task-link" data-filename="' + taskFile.filename + '">' + match + '</a>';
+                    }
+                    return match;
+                });
+                const span = document.createElement('span');
+                span.innerHTML = html;
+                node.parentNode.replaceChild(span, node);
+            });
+            container.querySelectorAll('.task-link').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loadFile(link.dataset.filename);
+                });
+            });
+        }
+
+        // --- Theme ---
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            localStorage.setItem('mb-theme', theme);
+        }
+
+        document.getElementById('theme-btn').addEventListener('click', function() {
+            state.theme = state.theme === 'light' ? 'dark' : 'light';
+            applyTheme(state.theme);
+        });
+
+        // --- Refresh ---
+        document.getElementById('refresh-btn').addEventListener('click', async function() {
+            await loadManifest();
+            buildSidebar();
+            if (state.currentFile) {
+                loadFile(state.currentFile);
+            }
+        });
+
+        // --- Auto-refresh (30s) ---
+        setInterval(function() {
+            if (state.currentFile) {
+                loadFile(state.currentFile);
+            }
+        }, 30000);
+
+        // --- Helpers ---
+        function el(tag, className, text) {
+            const e = document.createElement(tag);
+            if (className) e.className = className;
+            if (text) e.textContent = text;
+            return e;
+        }
+    </script>
+</body>
+</html>
