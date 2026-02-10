@@ -82,4 +82,8 @@ def list_tasks():
 if __name__ == "__main__":
     print(f"Memory Bank Dashboard")
     print(f"Reading from: {MEMORY_BANK_DIR}")
-    app.run(debug=True, host="127.0.0.1", port=5000)
+    app.run(
+        debug=os.environ.get("FLASK_DEBUG", "1") == "1",
+        host=os.environ.get("HOST", "127.0.0.1"),
+        port=int(os.environ.get("PORT", "5000")),
+    )

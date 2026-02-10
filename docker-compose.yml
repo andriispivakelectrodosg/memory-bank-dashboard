@@ -1,0 +1,11 @@
+services:
+  dashboard:
+    build: .
+    container_name: memory-bank-dashboard
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../memory-bank:/memory-bank:ro
+    environment:
+      - MEMORY_BANK_DIR=/memory-bank
