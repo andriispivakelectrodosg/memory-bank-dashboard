@@ -1,6 +1,10 @@
 """Memory Bank Dashboard -- Read-Only Flask App"""
 import os
+
+from dotenv import load_dotenv
 from flask import Flask, jsonify, render_template, abort
+
+load_dotenv()
 
 app = Flask(__name__)
 
