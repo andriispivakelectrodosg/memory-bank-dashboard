@@ -7,5 +7,7 @@ services:
       - "5000:5000"
     volumes:
       - ../memory-bank:/memory-bank:ro
+      - ../docs/lessons-learned:/lessons-learned:ro
     environment:
       - MEMORY_BANK_DIR=/memory-bank
+      - LESSONS_DIR=/lessons-learned

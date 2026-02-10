@@ -139,6 +139,19 @@
             font-size: 0.8rem;
         }
 
+        .sidebar-item.lesson-item {
+            padding-left: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .sidebar-empty {
+            padding: 0.4rem 2rem;
+            font-size: 0.75rem;
+            color: var(--text-sidebar);
+            font-style: italic;
+            opacity: 0.6;
+        }
+
         .sidebar-divider {
             border-top: 1px solid rgba(255,255,255,0.08);
             margin: 0.6rem 1.25rem;
@@ -349,8 +362,11 @@
     <script>
         const state = {
             currentFile: null,
+            currentSource: null,  // 'memory-bank' or 'lesson'
             files: [],
             tasks: [],
+            lessons: [],
+            hasLessonIndex: false,
             theme: localStorage.getItem('mb-theme') || 'light',
         };
 
@@ -369,16 +385,21 @@
 
         // --- API ---
         async function loadManifest() {
-            const [filesRes, tasksRes] = await Promise.all([
+            const [filesRes, tasksRes, lessonsRes] = await Promise.all([
                 fetch('/api/files').then(r => r.json()),
                 fetch('/api/tasks').then(r => r.json()),
+                fetch('/api/lessons').then(r => r.json()),
             ]);
             state.files = filesRes.files;
             state.tasks = tasksRes.tasks;
+            state.lessons = lessonsRes.lessons;
+            state.hasLessonIndex = lessonsRes.has_index;
         }
 
-        async function loadFile(filename) {
+        async function loadFile(filename, source) {
+            source = source || 'memory-bank';
             state.currentFile = filename;
+            state.currentSource = source;
             updateActiveState();
 
             const body = document.getElementById('markdown-body');
@@ -387,7 +408,13 @@
             meta.style.display = 'none';
 
             try {
-                const res = await fetch('/api/file/' + encodeURIComponent(filename));
+                var url;
+                if (source === 'lesson') {
+                    url = '/api/lesson/' + encodeURIComponent(filename);
+                } else {
+                    url = '/api/file/' + encodeURIComponent(filename);
+                }
+                const res = await fetch(url);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
 
@@ -395,11 +422,12 @@
 
                 // Show file path and last modified
                 const date = new Date(data.modified * 1000);
-                meta.textContent = filename + '  \u2014  last modified ' + date.toLocaleString();
+                var label = source === 'lesson' ? 'lessons-learned/' + filename : filename;
+                meta.textContent = label + '  \u2014  last modified ' + date.toLocaleString();
                 meta.style.display = 'block';
 
                 // Breadcrumb for task detail pages
-                if (filename.startsWith('tasks/') && filename !== 'tasks/_index.md') {
+                if (source === 'memory-bank' && filename.startsWith('tasks/') && filename !== 'tasks/_index.md') {
                     const bc = document.createElement('div');
                     bc.className = 'breadcrumb';
                     const a = document.createElement('a');
@@ -414,9 +442,34 @@
                     body.prepend(bc);
                 }
 
+                // Breadcrumb for lesson detail pages
+                if (source === 'lesson' && filename !== 'lesson-learned-index.md') {
+                    const bc = document.createElement('div');
+                    bc.className = 'breadcrumb';
+                    if (state.hasLessonIndex) {
+                        const a = document.createElement('a');
+                        a.href = '#';
+                        a.textContent = 'Lessons Index';
+                        a.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            loadFile('lesson-learned-index.md', 'lesson');
+                        });
+                        bc.appendChild(a);
+                    } else {
+                        bc.appendChild(document.createTextNode('Lessons Learned'));
+                    }
+                    bc.appendChild(document.createTextNode(' / ' + filename.replace('.md', '')));
+                    body.prepend(bc);
+                }
+
                 // Linkify task references in the index
-                if (filename === 'tasks/_index.md') {
+                if (source === 'memory-bank' && filename === 'tasks/_index.md') {
                     linkifyTaskReferences(body);
+                }
+
+                // Linkify LL references in lesson index
+                if (source === 'lesson' && filename === 'lesson-learned-index.md') {
+                    linkifyLessonReferences(body);
                 }
             } catch (err) {
                 body.innerHTML = '<div class="error">Failed to load ' + filename + ': ' + err.message + '</div>';
@@ -433,6 +486,7 @@
             state.files.forEach(function(f) {
                 const item = el('div', 'sidebar-item', f.label);
                 item.dataset.filename = f.filename;
+                item.dataset.source = 'memory-bank';
                 item.addEventListener('click', function() { loadFile(f.filename); });
                 sidebar.appendChild(item);
             });
@@ -442,20 +496,49 @@
 
             const indexItem = el('div', 'sidebar-item', 'Task Index');
             indexItem.dataset.filename = 'tasks/_index.md';
+            indexItem.dataset.source = 'memory-bank';
             indexItem.addEventListener('click', function() { loadFile('tasks/_index.md'); });
             sidebar.appendChild(indexItem);
 
             state.tasks.forEach(function(t) {
                 const item = el('div', 'sidebar-item task-item', t.label);
                 item.dataset.filename = t.filename;
+                item.dataset.source = 'memory-bank';
                 item.addEventListener('click', function() { loadFile(t.filename); });
                 sidebar.appendChild(item);
             });
+
+            // Lessons Learned section
+            sidebar.appendChild(el('div', 'sidebar-divider'));
+            sidebar.appendChild(el('div', 'sidebar-heading', 'Lessons Learned'));
+
+            if (state.hasLessonIndex) {
+                const llIndex = el('div', 'sidebar-item', 'Lessons Index');
+                llIndex.dataset.filename = 'lesson-learned-index.md';
+                llIndex.dataset.source = 'lesson';
+                llIndex.addEventListener('click', function() { loadFile('lesson-learned-index.md', 'lesson'); });
+                sidebar.appendChild(llIndex);
+            }
+
+            if (state.lessons.length > 0) {
+                state.lessons.forEach(function(l) {
+                    const item = el('div', 'sidebar-item lesson-item', l.label);
+                    item.dataset.filename = l.filename;
+                    item.dataset.source = 'lesson';
+                    item.addEventListener('click', function() { loadFile(l.filename, 'lesson'); });
+                    sidebar.appendChild(item);
+                });
+            } else if (!state.hasLessonIndex) {
+                sidebar.appendChild(el('div', 'sidebar-empty', 'No lessons yet'));
+            }
         }
 
         function updateActiveState() {
             document.querySelectorAll('.sidebar-item').forEach(function(item) {
-                item.classList.toggle('active', item.dataset.filename === state.currentFile);
+                item.classList.toggle('active',
+                    item.dataset.filename === state.currentFile &&
+                    item.dataset.source === state.currentSource
+                );
             });
         }
 
@@ -490,6 +573,37 @@
             });
         }
 
+        // --- Lesson linkification ---
+        function linkifyLessonReferences(container) {
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            const nodes = [];
+            while (walker.nextNode()) {
+                if (/LL-\d{3}/.test(walker.currentNode.textContent)) {
+                    nodes.push(walker.currentNode);
+                }
+            }
+            nodes.forEach(function(node) {
+                const html = node.textContent.replace(/\b(LL-\d{3})\b/g, function(match, llId) {
+                    const lessonFile = state.lessons.find(function(l) {
+                        return l.filename.toUpperCase().startsWith(llId.toUpperCase());
+                    });
+                    if (lessonFile) {
+                        return '<a href="#" class="task-link" data-filename="' + lessonFile.filename + '" data-source="lesson">' + match + '</a>';
+                    }
+                    return match;
+                });
+                const span = document.createElement('span');
+                span.innerHTML = html;
+                node.parentNode.replaceChild(span, node);
+            });
+            container.querySelectorAll('.task-link[data-source="lesson"]').forEach(function(link) {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    loadFile(link.dataset.filename, 'lesson');
+                });
+            });
+        }
+
         // --- Theme ---
         function applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -513,7 +627,7 @@
         // --- Auto-refresh (30s) ---
         setInterval(function() {
             if (state.currentFile) {
-                loadFile(state.currentFile);
+                loadFile(state.currentFile, state.currentSource);
             }
         }, 30000);
 
