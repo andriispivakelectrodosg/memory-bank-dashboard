@@ -4,19 +4,19 @@ from flask import Flask, jsonify, render_template, abort
 
 app = Flask(__name__)
 
-MEMORY_BANK_DIR = os.path.realpath(
-    os.environ.get(
-        "MEMORY_BANK_DIR",
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "memory-bank"),
-    )
-)
+_base = os.path.dirname(os.path.abspath(__file__))
 
-LESSONS_DIR = os.path.realpath(
-    os.environ.get(
-        "LESSONS_DIR",
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "docs", "lessons-learned"),
+
+def _dir(env_key, *default_parts):
+    return os.path.realpath(
+        os.environ.get(env_key, os.path.join(_base, "..", *default_parts))
     )
-)
+
+
+MEMORY_BANK_DIR = _dir("MEMORY_BANK_DIR", "memory-bank")
+LESSONS_DIR = _dir("LESSONS_DIR", "docs", "lessons-learned")
+ADRS_DIR = _dir("ADRS_DIR", "docs", "adrs")
+FEATURES_DIR = _dir("FEATURES_DIR", "features")
 
 CORE_FILES = [
     {"id": "projectbrief", "filename": "projectbrief.md", "label": "Project Brief"},
@@ -26,6 +26,32 @@ CORE_FILES = [
     {"id": "activeContext", "filename": "activeContext.md", "label": "Active Context"},
     {"id": "progress", "filename": "progress.md", "label": "Progress"},
 ]
+
+
+def _safe_read(base_dir, filename):
+    """Read a file with path traversal protection."""
+    safe_path = os.path.realpath(os.path.join(base_dir, filename))
+    if not safe_path.startswith(base_dir + os.sep) and safe_path != base_dir:
+        abort(403)
+    if not os.path.isfile(safe_path):
+        abort(404)
+    with open(safe_path, "r", encoding="utf-8") as fh:
+        return {"filename": filename, "content": fh.read(), "modified": os.path.getmtime(safe_path)}
+
+
+def _list_md(directory, exclude=None):
+    """List .md files in a directory, excluding specific filenames."""
+    exclude = exclude or set()
+    if not os.path.isdir(directory):
+        return []
+    result = []
+    for fname in sorted(os.listdir(directory)):
+        if fname.endswith(".md") and fname not in exclude:
+            path = os.path.join(directory, fname)
+            result.append(
+                {"filename": fname, "label": fname.replace(".md", ""), "modified": os.path.getmtime(path)}
+            )
+    return result
 
 
 @app.route("/")
@@ -39,97 +65,65 @@ def list_files():
     for f in CORE_FILES:
         path = os.path.join(MEMORY_BANK_DIR, f["filename"])
         exists = os.path.isfile(path)
-        files.append(
-            {
-                **f,
-                "exists": exists,
-                "modified": os.path.getmtime(path) if exists else None,
-            }
-        )
+        files.append({**f, "exists": exists, "modified": os.path.getmtime(path) if exists else None})
     return jsonify({"files": files})
 
 
 @app.route("/api/file/<path:filename>")
 def get_file(filename):
-    safe_path = os.path.realpath(os.path.join(MEMORY_BANK_DIR, filename))
-    if not safe_path.startswith(MEMORY_BANK_DIR + os.sep) and safe_path != MEMORY_BANK_DIR:
-        abort(403)
-    if not os.path.isfile(safe_path):
-        abort(404)
-    with open(safe_path, "r", encoding="utf-8") as fh:
-        content = fh.read()
-    return jsonify(
-        {
-            "filename": filename,
-            "content": content,
-            "modified": os.path.getmtime(safe_path),
-        }
-    )
+    return jsonify(_safe_read(MEMORY_BANK_DIR, filename))
 
 
 @app.route("/api/tasks")
 def list_tasks():
     tasks_dir = os.path.join(MEMORY_BANK_DIR, "tasks")
-    if not os.path.isdir(tasks_dir):
-        return jsonify({"tasks": []})
-    task_files = []
-    for fname in sorted(os.listdir(tasks_dir)):
-        if fname.endswith(".md") and fname != "_index.md":
-            path = os.path.join(tasks_dir, fname)
-            task_files.append(
-                {
-                    "filename": f"tasks/{fname}",
-                    "label": fname.replace(".md", ""),
-                    "modified": os.path.getmtime(path),
-                }
-            )
-    return jsonify({"tasks": task_files})
+    items = _list_md(tasks_dir, exclude={"_index.md"})
+    for item in items:
+        item["filename"] = f"tasks/{item['filename']}"
+    return jsonify({"tasks": items})
 
 
 @app.route("/api/lessons")
 def list_lessons():
-    if not os.path.isdir(LESSONS_DIR):
-        return jsonify({"lessons": [], "has_index": False})
-    lesson_files = []
-    has_index = False
-    for fname in sorted(os.listdir(LESSONS_DIR)):
-        if fname == "lesson-learned-index.md":
-            has_index = True
-            continue
-        if fname.endswith(".md"):
-            path = os.path.join(LESSONS_DIR, fname)
-            lesson_files.append(
-                {
-                    "filename": fname,
-                    "label": fname.replace(".md", ""),
-                    "modified": os.path.getmtime(path),
-                }
-            )
-    return jsonify({"lessons": lesson_files, "has_index": has_index})
+    has_index = os.path.isfile(os.path.join(LESSONS_DIR, "lesson-learned-index.md"))
+    items = _list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"})
+    return jsonify({"lessons": items, "has_index": has_index})
 
 
 @app.route("/api/lesson/<path:filename>")
 def get_lesson(filename):
-    safe_path = os.path.realpath(os.path.join(LESSONS_DIR, filename))
-    if not safe_path.startswith(LESSONS_DIR + os.sep) and safe_path != LESSONS_DIR:
-        abort(403)
-    if not os.path.isfile(safe_path):
-        abort(404)
-    with open(safe_path, "r", encoding="utf-8") as fh:
-        content = fh.read()
-    return jsonify(
-        {
-            "filename": filename,
-            "content": content,
-            "modified": os.path.getmtime(safe_path),
-        }
-    )
+    return jsonify(_safe_read(LESSONS_DIR, filename))
+
+
+@app.route("/api/adrs")
+def list_adrs():
+    has_index = os.path.isfile(os.path.join(ADRS_DIR, "README.md"))
+    items = _list_md(ADRS_DIR, exclude={"README.md"})
+    return jsonify({"adrs": items, "has_index": has_index})
+
+
+@app.route("/api/adr/<path:filename>")
+def get_adr(filename):
+    return jsonify(_safe_read(ADRS_DIR, filename))
+
+
+@app.route("/api/features")
+def list_features():
+    items = _list_md(FEATURES_DIR)
+    return jsonify({"features": items})
+
+
+@app.route("/api/feature/<path:filename>")
+def get_feature(filename):
+    return jsonify(_safe_read(FEATURES_DIR, filename))
 
 
 if __name__ == "__main__":
-    print(f"Memory Bank Dashboard")
-    print(f"Reading from: {MEMORY_BANK_DIR}")
-    print(f"Lessons from: {LESSONS_DIR}")
+    print("Memory Bank Dashboard")
+    print(f"  Memory Bank: {MEMORY_BANK_DIR}")
+    print(f"  Lessons:     {LESSONS_DIR}")
+    print(f"  ADRs:        {ADRS_DIR}")
+    print(f"  Features:    {FEATURES_DIR}")
     app.run(
         debug=os.environ.get("FLASK_DEBUG", "1") == "1",
         host=os.environ.get("HOST", "127.0.0.1"),

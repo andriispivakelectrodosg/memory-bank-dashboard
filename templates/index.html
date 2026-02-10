@@ -59,16 +59,9 @@
             z-index: 10;
         }
 
-        .header h1 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            letter-spacing: -0.01em;
-        }
+        .header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
 
-        .header-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
+        .header-actions { display: flex; gap: 0.5rem; }
 
         .header-btn {
             background: rgba(255,255,255,0.08);
@@ -81,16 +74,9 @@
             transition: background 0.15s, color 0.15s;
         }
 
-        .header-btn:hover {
-            background: rgba(255,255,255,0.15);
-            color: #fff;
-        }
+        .header-btn:hover { background: rgba(255,255,255,0.15); color: #fff; }
 
-        .app-container {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
+        .app-container { display: flex; flex: 1; overflow: hidden; }
 
         /* Sidebar */
         .sidebar {
@@ -102,14 +88,36 @@
             border-right: 1px solid rgba(255,255,255,0.06);
         }
 
+        .sidebar-section { border-bottom: 1px solid rgba(255,255,255,0.06); }
+        .sidebar-section:last-child { border-bottom: none; }
+
         .sidebar-heading {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 0.6rem 1.25rem 0.35rem;
             font-size: 0.65rem;
             text-transform: uppercase;
             letter-spacing: 0.1em;
             color: var(--text-sidebar);
             font-weight: 700;
+            cursor: pointer;
+            user-select: none;
+            transition: color 0.12s;
         }
+
+        .sidebar-heading:hover { color: var(--text-sidebar-active); }
+
+        .sidebar-chevron {
+            font-size: 0.6rem;
+            transition: transform 0.15s;
+            display: inline-block;
+        }
+
+        .sidebar-section.collapsed .sidebar-chevron { transform: rotate(-90deg); }
+        .sidebar-section.collapsed .sidebar-body { display: none; }
+
+        .sidebar-body { padding-bottom: 0.25rem; }
 
         .sidebar-item {
             display: block;
@@ -134,15 +142,7 @@
             font-weight: 600;
         }
 
-        .sidebar-item.task-item {
-            padding-left: 2rem;
-            font-size: 0.8rem;
-        }
-
-        .sidebar-item.lesson-item {
-            padding-left: 2rem;
-            font-size: 0.8rem;
-        }
+        .sidebar-item.sub-item { padding-left: 2rem; font-size: 0.8rem; }
 
         .sidebar-empty {
             padding: 0.4rem 2rem;
@@ -152,21 +152,19 @@
             opacity: 0.6;
         }
 
-        .sidebar-divider {
-            border-top: 1px solid rgba(255,255,255,0.08);
-            margin: 0.6rem 1.25rem;
+        .sidebar-count {
+            font-size: 0.6rem;
+            background: rgba(255,255,255,0.1);
+            color: var(--text-sidebar);
+            padding: 0.1rem 0.4rem;
+            border-radius: 8px;
+            margin-left: 0.4rem;
+            font-weight: 400;
         }
 
         /* Content */
-        .content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 2rem 3rem;
-        }
-
-        .content-inner {
-            max-width: 860px;
-        }
+        .content { flex: 1; overflow-y: auto; padding: 2rem 3rem; }
+        .content-inner { max-width: 860px; }
 
         .content-meta {
             font-size: 0.75rem;
@@ -176,26 +174,11 @@
             border-bottom: 1px solid var(--border-color);
         }
 
-        .breadcrumb {
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            margin-bottom: 1rem;
-        }
+        .breadcrumb { font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 1rem; }
+        .breadcrumb a { color: var(--accent); text-decoration: none; }
+        .breadcrumb a:hover { text-decoration: underline; }
 
-        .breadcrumb a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .breadcrumb a:hover {
-            text-decoration: underline;
-        }
-
-        .loading {
-            color: var(--text-secondary);
-            font-style: italic;
-            padding: 2rem 0;
-        }
+        .loading { color: var(--text-secondary); font-style: italic; padding: 2rem 0; }
 
         .error {
             color: #ef4444;
@@ -207,135 +190,42 @@
 
         /* Markdown body */
         .markdown-body h1 {
-            font-size: 1.65rem;
-            margin: 0 0 0.75rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--border-color);
-            font-weight: 700;
+            font-size: 1.65rem; margin: 0 0 0.75rem; padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--border-color); font-weight: 700;
         }
-
-        .markdown-body h2 {
-            font-size: 1.25rem;
-            margin: 1.75rem 0 0.6rem;
-            color: var(--accent);
-            font-weight: 600;
-        }
-
-        .markdown-body h3 {
-            font-size: 1.05rem;
-            margin: 1.25rem 0 0.5rem;
-            font-weight: 600;
-        }
-
-        .markdown-body p {
-            margin: 0.5rem 0;
-            line-height: 1.7;
-        }
-
-        .markdown-body ul, .markdown-body ol {
-            padding-left: 1.5rem;
-            margin: 0.5rem 0;
-        }
-
-        .markdown-body li {
-            margin: 0.2rem 0;
-            line-height: 1.65;
-        }
-
-        .markdown-body strong {
-            font-weight: 600;
-        }
-
+        .markdown-body h2 { font-size: 1.25rem; margin: 1.75rem 0 0.6rem; color: var(--accent); font-weight: 600; }
+        .markdown-body h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; font-weight: 600; }
+        .markdown-body p { margin: 0.5rem 0; line-height: 1.7; }
+        .markdown-body ul, .markdown-body ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+        .markdown-body li { margin: 0.2rem 0; line-height: 1.65; }
+        .markdown-body strong { font-weight: 600; }
         .markdown-body code {
-            background: var(--code-bg);
-            padding: 0.15em 0.4em;
-            border-radius: 4px;
-            font-size: 0.88em;
-            font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+            background: var(--code-bg); padding: 0.15em 0.4em; border-radius: 4px;
+            font-size: 0.88em; font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
         }
-
         .markdown-body pre {
-            background: var(--code-bg);
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            margin: 1rem 0;
-            border: 1px solid var(--border-color);
+            background: var(--code-bg); padding: 1rem; border-radius: 8px;
+            overflow-x: auto; margin: 1rem 0; border: 1px solid var(--border-color);
         }
-
-        .markdown-body pre code {
-            background: none;
-            padding: 0;
-            font-size: 0.85em;
-        }
-
-        .markdown-body table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 1rem 0;
-            font-size: 0.88rem;
-        }
-
+        .markdown-body pre code { background: none; padding: 0; font-size: 0.85em; }
+        .markdown-body table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
         .markdown-body th {
-            background: var(--bg-secondary);
-            font-weight: 600;
-            text-align: left;
-            padding: 0.55rem 0.75rem;
-            border: 1px solid var(--border-color);
+            background: var(--bg-secondary); font-weight: 600; text-align: left;
+            padding: 0.55rem 0.75rem; border: 1px solid var(--border-color);
         }
-
-        .markdown-body td {
-            padding: 0.5rem 0.75rem;
-            border: 1px solid var(--border-color);
-        }
-
-        .markdown-body tr:nth-child(even) {
-            background: var(--table-stripe);
-        }
-
+        .markdown-body td { padding: 0.5rem 0.75rem; border: 1px solid var(--border-color); }
+        .markdown-body tr:nth-child(even) { background: var(--table-stripe); }
         .markdown-body blockquote {
-            border-left: 4px solid var(--accent);
-            padding: 0.5rem 1rem;
-            margin: 1rem 0;
-            background: var(--bg-secondary);
-            border-radius: 0 6px 6px 0;
-            color: var(--text-secondary);
+            border-left: 4px solid var(--accent); padding: 0.5rem 1rem; margin: 1rem 0;
+            background: var(--bg-secondary); border-radius: 0 6px 6px 0; color: var(--text-secondary);
         }
+        .markdown-body hr { border: none; border-top: 1px solid var(--border-color); margin: 1.5rem 0; }
+        .markdown-body a { color: var(--accent); text-decoration: none; }
+        .markdown-body a:hover { text-decoration: underline; }
+        .markdown-body input[type="checkbox"] { margin-right: 0.4rem; accent-color: var(--accent); }
 
-        .markdown-body hr {
-            border: none;
-            border-top: 1px solid var(--border-color);
-            margin: 1.5rem 0;
-        }
-
-        .markdown-body a {
-            color: var(--accent);
-            text-decoration: none;
-        }
-
-        .markdown-body a:hover {
-            text-decoration: underline;
-        }
-
-        .markdown-body input[type="checkbox"] {
-            margin-right: 0.4rem;
-            accent-color: var(--accent);
-        }
-
-        .task-link {
-            color: var(--accent) !important;
-            cursor: pointer;
-            font-weight: 600;
-        }
-
-        .task-link:hover {
-            text-decoration: underline !important;
-        }
-
-        /* Status badges */
-        .status-completed { color: #22c55e; }
-        .status-in-progress { color: #f59e0b; }
-        .status-pending { color: var(--text-secondary); }
+        .task-link { color: var(--accent) !important; cursor: pointer; font-weight: 600; }
+        .task-link:hover { text-decoration: underline !important; }
     </style>
 </head>
 <body>
@@ -360,15 +250,23 @@
 
     <script src="https://cdn.jsdelivr.net/npm/marked@14/marked.min.js"></script>
     <script>
+        // --- State ---
         const state = {
             currentFile: null,
-            currentSource: null,  // 'memory-bank' or 'lesson'
-            files: [],
-            tasks: [],
-            lessons: [],
-            hasLessonIndex: false,
+            currentSource: null,
+            files: [], tasks: [], lessons: [], adrs: [], features: [],
+            hasLessonIndex: false, hasAdrIndex: false,
             theme: localStorage.getItem('mb-theme') || 'light',
         };
+
+        // --- Collapsed sections (persisted) ---
+        function getCollapsed() {
+            try { return JSON.parse(localStorage.getItem('mb-collapsed') || '{}'); } catch(e) { return {}; }
+        }
+        function setCollapsed(id, val) {
+            var c = getCollapsed(); c[id] = val; localStorage.setItem('mb-collapsed', JSON.stringify(c));
+        }
+        function isCollapsed(id) { return getCollapsed()[id] === true; }
 
         // --- Init ---
         async function init() {
@@ -376,25 +274,42 @@
             marked.setOptions({ gfm: true, breaks: false });
             await loadManifest();
             buildSidebar();
-            if (state.files.length > 0) {
-                loadFile(state.files[0].filename);
-            }
+            if (state.files.length > 0) { loadFile(state.files[0].filename); }
         }
-
         document.addEventListener('DOMContentLoaded', init);
 
         // --- API ---
         async function loadManifest() {
-            const [filesRes, tasksRes, lessonsRes] = await Promise.all([
-                fetch('/api/files').then(r => r.json()),
-                fetch('/api/tasks').then(r => r.json()),
-                fetch('/api/lessons').then(r => r.json()),
+            const [filesRes, tasksRes, lessonsRes, adrsRes, featuresRes] = await Promise.all([
+                fetch('/api/files').then(function(r) { return r.json(); }),
+                fetch('/api/tasks').then(function(r) { return r.json(); }),
+                fetch('/api/lessons').then(function(r) { return r.json(); }),
+                fetch('/api/adrs').then(function(r) { return r.json(); }),
+                fetch('/api/features').then(function(r) { return r.json(); }),
             ]);
             state.files = filesRes.files;
             state.tasks = tasksRes.tasks;
             state.lessons = lessonsRes.lessons;
             state.hasLessonIndex = lessonsRes.has_index;
+            state.adrs = adrsRes.adrs;
+            state.hasAdrIndex = adrsRes.has_index;
+            state.features = featuresRes.features;
         }
+
+        // --- Source-to-API mapping ---
+        var sourceApiMap = {
+            'memory-bank': '/api/file/',
+            'lesson': '/api/lesson/',
+            'adr': '/api/adr/',
+            'feature': '/api/feature/',
+        };
+
+        var sourceLabel = {
+            'memory-bank': '',
+            'lesson': 'lessons-learned/',
+            'adr': 'adrs/',
+            'feature': 'features/',
+        };
 
         async function loadFile(filename, source) {
             source = source || 'memory-bank';
@@ -402,135 +317,173 @@
             state.currentSource = source;
             updateActiveState();
 
-            const body = document.getElementById('markdown-body');
-            const meta = document.getElementById('content-meta');
+            var body = document.getElementById('markdown-body');
+            var meta = document.getElementById('content-meta');
             body.innerHTML = '<div class="loading">Loading...</div>';
             meta.style.display = 'none';
 
             try {
-                var url;
-                if (source === 'lesson') {
-                    url = '/api/lesson/' + encodeURIComponent(filename);
-                } else {
-                    url = '/api/file/' + encodeURIComponent(filename);
-                }
-                const res = await fetch(url);
+                var url = sourceApiMap[source] + encodeURIComponent(filename);
+                var res = await fetch(url);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
+                var data = await res.json();
 
                 body.innerHTML = marked.parse(data.content);
 
-                // Show file path and last modified
-                const date = new Date(data.modified * 1000);
-                var label = source === 'lesson' ? 'lessons-learned/' + filename : filename;
-                meta.textContent = label + '  \u2014  last modified ' + date.toLocaleString();
+                var date = new Date(data.modified * 1000);
+                meta.textContent = sourceLabel[source] + filename + '  \u2014  last modified ' + date.toLocaleString();
                 meta.style.display = 'block';
 
                 // Breadcrumb for task detail pages
                 if (source === 'memory-bank' && filename.startsWith('tasks/') && filename !== 'tasks/_index.md') {
-                    const bc = document.createElement('div');
-                    bc.className = 'breadcrumb';
-                    const a = document.createElement('a');
-                    a.href = '#';
-                    a.textContent = 'Tasks Index';
-                    a.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        loadFile('tasks/_index.md');
-                    });
-                    bc.appendChild(a);
-                    bc.appendChild(document.createTextNode(' / ' + filename.split('/').pop().replace('.md', '')));
-                    body.prepend(bc);
+                    addBreadcrumb(body, 'Tasks Index', function() { loadFile('tasks/_index.md'); },
+                        filename.split('/').pop().replace('.md', ''));
                 }
 
                 // Breadcrumb for lesson detail pages
                 if (source === 'lesson' && filename !== 'lesson-learned-index.md') {
-                    const bc = document.createElement('div');
-                    bc.className = 'breadcrumb';
                     if (state.hasLessonIndex) {
-                        const a = document.createElement('a');
-                        a.href = '#';
-                        a.textContent = 'Lessons Index';
-                        a.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            loadFile('lesson-learned-index.md', 'lesson');
-                        });
-                        bc.appendChild(a);
+                        addBreadcrumb(body, 'Lessons Index', function() { loadFile('lesson-learned-index.md', 'lesson'); },
+                            filename.replace('.md', ''));
                     } else {
-                        bc.appendChild(document.createTextNode('Lessons Learned'));
+                        addBreadcrumb(body, null, null, filename.replace('.md', ''), 'Lessons Learned');
                     }
-                    bc.appendChild(document.createTextNode(' / ' + filename.replace('.md', '')));
-                    body.prepend(bc);
                 }
 
-                // Linkify task references in the index
-                if (source === 'memory-bank' && filename === 'tasks/_index.md') {
-                    linkifyTaskReferences(body);
+                // Breadcrumb for ADR detail pages
+                if (source === 'adr' && filename !== 'README.md') {
+                    if (state.hasAdrIndex) {
+                        addBreadcrumb(body, 'ADR Index', function() { loadFile('README.md', 'adr'); },
+                            filename.replace('.md', ''));
+                    } else {
+                        addBreadcrumb(body, null, null, filename.replace('.md', ''), 'ADRs');
+                    }
                 }
 
-                // Linkify LL references in lesson index
-                if (source === 'lesson' && filename === 'lesson-learned-index.md') {
-                    linkifyLessonReferences(body);
-                }
+                // Linkify references
+                if (source === 'memory-bank' && filename === 'tasks/_index.md') linkifyTaskReferences(body);
+                if (source === 'lesson' && filename === 'lesson-learned-index.md') linkifyLessonReferences(body);
             } catch (err) {
                 body.innerHTML = '<div class="error">Failed to load ' + filename + ': ' + err.message + '</div>';
             }
         }
 
+        function addBreadcrumb(container, linkText, linkClick, suffix, plainPrefix) {
+            var bc = document.createElement('div');
+            bc.className = 'breadcrumb';
+            if (linkText && linkClick) {
+                var a = document.createElement('a');
+                a.href = '#';
+                a.textContent = linkText;
+                a.addEventListener('click', function(e) { e.preventDefault(); linkClick(); });
+                bc.appendChild(a);
+            } else if (plainPrefix) {
+                bc.appendChild(document.createTextNode(plainPrefix));
+            }
+            bc.appendChild(document.createTextNode(' / ' + suffix));
+            container.prepend(bc);
+        }
+
         // --- Sidebar ---
         function buildSidebar() {
-            const sidebar = document.getElementById('sidebar');
+            var sidebar = document.getElementById('sidebar');
             sidebar.innerHTML = '';
 
-            sidebar.appendChild(el('div', 'sidebar-heading', 'Core Files'));
-
-            state.files.forEach(function(f) {
-                const item = el('div', 'sidebar-item', f.label);
-                item.dataset.filename = f.filename;
-                item.dataset.source = 'memory-bank';
-                item.addEventListener('click', function() { loadFile(f.filename); });
-                sidebar.appendChild(item);
-            });
-
-            sidebar.appendChild(el('div', 'sidebar-divider'));
-            sidebar.appendChild(el('div', 'sidebar-heading', 'Tasks'));
-
-            const indexItem = el('div', 'sidebar-item', 'Task Index');
-            indexItem.dataset.filename = 'tasks/_index.md';
-            indexItem.dataset.source = 'memory-bank';
-            indexItem.addEventListener('click', function() { loadFile('tasks/_index.md'); });
-            sidebar.appendChild(indexItem);
-
-            state.tasks.forEach(function(t) {
-                const item = el('div', 'sidebar-item task-item', t.label);
-                item.dataset.filename = t.filename;
-                item.dataset.source = 'memory-bank';
-                item.addEventListener('click', function() { loadFile(t.filename); });
-                sidebar.appendChild(item);
-            });
-
-            // Lessons Learned section
-            sidebar.appendChild(el('div', 'sidebar-divider'));
-            sidebar.appendChild(el('div', 'sidebar-heading', 'Lessons Learned'));
-
-            if (state.hasLessonIndex) {
-                const llIndex = el('div', 'sidebar-item', 'Lessons Index');
-                llIndex.dataset.filename = 'lesson-learned-index.md';
-                llIndex.dataset.source = 'lesson';
-                llIndex.addEventListener('click', function() { loadFile('lesson-learned-index.md', 'lesson'); });
-                sidebar.appendChild(llIndex);
-            }
-
-            if (state.lessons.length > 0) {
-                state.lessons.forEach(function(l) {
-                    const item = el('div', 'sidebar-item lesson-item', l.label);
-                    item.dataset.filename = l.filename;
-                    item.dataset.source = 'lesson';
-                    item.addEventListener('click', function() { loadFile(l.filename, 'lesson'); });
-                    sidebar.appendChild(item);
+            // Core Files
+            addSection(sidebar, 'core', 'Core Files', state.files.length, function(body) {
+                state.files.forEach(function(f) {
+                    body.appendChild(sidebarItem(f.label, f.filename, 'memory-bank'));
                 });
-            } else if (!state.hasLessonIndex) {
-                sidebar.appendChild(el('div', 'sidebar-empty', 'No lessons yet'));
+            });
+
+            // Tasks
+            addSection(sidebar, 'tasks', 'Tasks', state.tasks.length + 1, function(body) {
+                body.appendChild(sidebarItem('Task Index', 'tasks/_index.md', 'memory-bank'));
+                state.tasks.forEach(function(t) {
+                    body.appendChild(sidebarItem(t.label, t.filename, 'memory-bank', true));
+                });
+            });
+
+            // Lessons Learned
+            var llCount = state.lessons.length + (state.hasLessonIndex ? 1 : 0);
+            addSection(sidebar, 'lessons', 'Lessons Learned', llCount, function(body) {
+                if (state.hasLessonIndex) {
+                    body.appendChild(sidebarItem('Lessons Index', 'lesson-learned-index.md', 'lesson'));
+                }
+                if (state.lessons.length > 0) {
+                    state.lessons.forEach(function(l) {
+                        body.appendChild(sidebarItem(l.label, l.filename, 'lesson', true));
+                    });
+                } else if (!state.hasLessonIndex) {
+                    body.appendChild(el('div', 'sidebar-empty', 'No lessons yet'));
+                }
+            });
+
+            // ADRs
+            var adrCount = state.adrs.length + (state.hasAdrIndex ? 1 : 0);
+            addSection(sidebar, 'adrs', 'ADRs', adrCount, function(body) {
+                if (state.hasAdrIndex) {
+                    body.appendChild(sidebarItem('ADR Index', 'README.md', 'adr'));
+                }
+                if (state.adrs.length > 0) {
+                    state.adrs.forEach(function(a) {
+                        body.appendChild(sidebarItem(a.label, a.filename, 'adr', true));
+                    });
+                } else if (!state.hasAdrIndex) {
+                    body.appendChild(el('div', 'sidebar-empty', 'No ADRs yet'));
+                }
+            });
+
+            // Features
+            addSection(sidebar, 'features', 'Features', state.features.length, function(body) {
+                if (state.features.length > 0) {
+                    state.features.forEach(function(f) {
+                        body.appendChild(sidebarItem(f.label, f.filename, 'feature', true));
+                    });
+                } else {
+                    body.appendChild(el('div', 'sidebar-empty', 'No features yet'));
+                }
+            });
+        }
+
+        function addSection(sidebar, id, label, count, buildBody) {
+            var section = el('div', 'sidebar-section');
+            if (isCollapsed(id)) section.classList.add('collapsed');
+
+            // Heading with chevron and count
+            var heading = el('div', 'sidebar-heading');
+            var labelSpan = document.createElement('span');
+            labelSpan.textContent = label;
+            if (count > 0) {
+                var badge = el('span', 'sidebar-count', String(count));
+                labelSpan.appendChild(badge);
             }
+            heading.appendChild(labelSpan);
+            var chevron = el('span', 'sidebar-chevron', '\u25BE');
+            heading.appendChild(chevron);
+
+            heading.addEventListener('click', function() {
+                var nowCollapsed = !section.classList.contains('collapsed');
+                section.classList.toggle('collapsed');
+                setCollapsed(id, nowCollapsed);
+            });
+
+            section.appendChild(heading);
+
+            var body = el('div', 'sidebar-body');
+            buildBody(body);
+            section.appendChild(body);
+
+            sidebar.appendChild(section);
+        }
+
+        function sidebarItem(label, filename, source, isSub) {
+            var cls = 'sidebar-item' + (isSub ? ' sub-item' : '');
+            var item = el('div', cls, label);
+            item.dataset.filename = filename;
+            item.dataset.source = source;
+            item.addEventListener('click', function() { loadFile(filename, source); });
+            return item;
         }
 
         function updateActiveState() {
@@ -544,63 +497,45 @@
 
         // --- Task linkification ---
         function linkifyTaskReferences(container) {
-            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-            const nodes = [];
+            var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            var nodes = [];
             while (walker.nextNode()) {
-                if (/\[TASK\d+\]/.test(walker.currentNode.textContent)) {
-                    nodes.push(walker.currentNode);
-                }
+                if (/\[TASK\d+\]/.test(walker.currentNode.textContent)) nodes.push(walker.currentNode);
             }
             nodes.forEach(function(node) {
-                const html = node.textContent.replace(/\[(TASK\d+)\]/g, function(match, taskId) {
-                    const taskFile = state.tasks.find(function(t) {
-                        return t.filename.toUpperCase().includes(taskId);
-                    });
-                    if (taskFile) {
-                        return '<a href="#" class="task-link" data-filename="' + taskFile.filename + '">' + match + '</a>';
-                    }
+                var html = node.textContent.replace(/\[(TASK\d+)\]/g, function(match, taskId) {
+                    var taskFile = state.tasks.find(function(t) { return t.filename.toUpperCase().includes(taskId); });
+                    if (taskFile) return '<a href="#" class="task-link" data-filename="' + taskFile.filename + '" data-source="memory-bank">' + match + '</a>';
                     return match;
                 });
-                const span = document.createElement('span');
+                var span = document.createElement('span');
                 span.innerHTML = html;
                 node.parentNode.replaceChild(span, node);
             });
-            container.querySelectorAll('.task-link').forEach(function(link) {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    loadFile(link.dataset.filename);
-                });
+            container.querySelectorAll('.task-link[data-source="memory-bank"]').forEach(function(link) {
+                link.addEventListener('click', function(e) { e.preventDefault(); loadFile(link.dataset.filename); });
             });
         }
 
         // --- Lesson linkification ---
         function linkifyLessonReferences(container) {
-            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-            const nodes = [];
+            var walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+            var nodes = [];
             while (walker.nextNode()) {
-                if (/LL-\d{3}/.test(walker.currentNode.textContent)) {
-                    nodes.push(walker.currentNode);
-                }
+                if (/LL-\d{3}/.test(walker.currentNode.textContent)) nodes.push(walker.currentNode);
             }
             nodes.forEach(function(node) {
-                const html = node.textContent.replace(/\b(LL-\d{3})\b/g, function(match, llId) {
-                    const lessonFile = state.lessons.find(function(l) {
-                        return l.filename.toUpperCase().startsWith(llId.toUpperCase());
-                    });
-                    if (lessonFile) {
-                        return '<a href="#" class="task-link" data-filename="' + lessonFile.filename + '" data-source="lesson">' + match + '</a>';
-                    }
+                var html = node.textContent.replace(/\b(LL-\d{3})\b/g, function(match, llId) {
+                    var lessonFile = state.lessons.find(function(l) { return l.filename.toUpperCase().startsWith(llId.toUpperCase()); });
+                    if (lessonFile) return '<a href="#" class="task-link" data-filename="' + lessonFile.filename + '" data-source="lesson">' + match + '</a>';
                     return match;
                 });
-                const span = document.createElement('span');
+                var span = document.createElement('span');
                 span.innerHTML = html;
                 node.parentNode.replaceChild(span, node);
             });
             container.querySelectorAll('.task-link[data-source="lesson"]').forEach(function(link) {
-                link.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    loadFile(link.dataset.filename, 'lesson');
-                });
+                link.addEventListener('click', function(e) { e.preventDefault(); loadFile(link.dataset.filename, 'lesson'); });
             });
         }
 
@@ -609,7 +544,6 @@
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('mb-theme', theme);
         }
-
         document.getElementById('theme-btn').addEventListener('click', function() {
             state.theme = state.theme === 'light' ? 'dark' : 'light';
             applyTheme(state.theme);
@@ -619,21 +553,17 @@
         document.getElementById('refresh-btn').addEventListener('click', async function() {
             await loadManifest();
             buildSidebar();
-            if (state.currentFile) {
-                loadFile(state.currentFile);
-            }
+            if (state.currentFile) loadFile(state.currentFile, state.currentSource);
         });
 
         // --- Auto-refresh (30s) ---
         setInterval(function() {
-            if (state.currentFile) {
-                loadFile(state.currentFile, state.currentSource);
-            }
+            if (state.currentFile) loadFile(state.currentFile, state.currentSource);
         }, 30000);
 
         // --- Helpers ---
         function el(tag, className, text) {
-            const e = document.createElement(tag);
+            var e = document.createElement(tag);
             if (className) e.className = className;
             if (text) e.textContent = text;
             return e;
