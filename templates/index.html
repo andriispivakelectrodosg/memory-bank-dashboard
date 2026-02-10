@@ -107,7 +107,7 @@
             transition: background-color 0.15s;
         }
 
-        #accent-picker {
+        #accent-picker, #bg-picker {
             position: absolute;
             opacity: 0;
             width: 0;
@@ -282,11 +282,18 @@
             <div class="color-picker-wrapper">
                 <label class="color-picker-label" for="accent-picker" title="Choose accent color">
                     <span class="color-picker-swatch" id="color-swatch"></span>
-                    Color
+                    Accent
                 </label>
                 <input type="color" id="accent-picker" value="#3b82f6">
             </div>
-            <button class="header-btn" id="theme-btn" title="Toggle dark/light theme">Theme</button>
+            <div class="color-picker-wrapper">
+                <label class="color-picker-label" for="bg-picker" title="Choose background color">
+                    <span class="color-picker-swatch" id="bg-swatch"></span>
+                    Background
+                </label>
+                <input type="color" id="bg-picker" value="#ffffff">
+            </div>
+            <button class="header-btn" id="theme-btn" title="Reset all colors to defaults">Reset</button>
         </div>
     </header>
     <div class="app-container">
@@ -323,6 +330,7 @@
 
         // --- Accent Color ---
         var defaultAccents = { light: '#3b82f6', dark: '#60a5fa' };
+        var defaultBgs = { light: '#ffffff', dark: '#0f172a' };
 
         function hexToRgb(hex) {
             var r = parseInt(hex.slice(1, 3), 16);
@@ -331,12 +339,33 @@
             return { r: r, g: g, b: b };
         }
 
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(function(c) {
+                return Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, '0');
+            }).join('');
+        }
+
         function darkenHex(hex, amount) {
             var rgb = hexToRgb(hex);
-            var r = Math.max(0, Math.round(rgb.r * (1 - amount)));
-            var g = Math.max(0, Math.round(rgb.g * (1 - amount)));
-            var b = Math.max(0, Math.round(rgb.b * (1 - amount)));
-            return '#' + [r, g, b].map(function(c) { return c.toString(16).padStart(2, '0'); }).join('');
+            return rgbToHex(rgb.r * (1 - amount), rgb.g * (1 - amount), rgb.b * (1 - amount));
+        }
+
+        function lightenHex(hex, amount) {
+            var rgb = hexToRgb(hex);
+            return rgbToHex(
+                rgb.r + (255 - rgb.r) * amount,
+                rgb.g + (255 - rgb.g) * amount,
+                rgb.b + (255 - rgb.b) * amount
+            );
+        }
+
+        function luminance(hex) {
+            var rgb = hexToRgb(hex);
+            var srgb = [rgb.r, rgb.g, rgb.b].map(function(c) {
+                c = c / 255;
+                return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+            });
+            return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
         }
 
         function applyAccentColor(hex) {
@@ -349,13 +378,42 @@
             document.getElementById('color-swatch').style.backgroundColor = hex;
         }
 
+        function applyBgColor(hex) {
+            var root = document.documentElement;
+            var isLight = luminance(hex) > 0.4;
+
+            root.style.setProperty('--bg-primary', hex);
+            root.style.setProperty('--bg-secondary', isLight ? darkenHex(hex, 0.03) : lightenHex(hex, 0.06));
+            root.style.setProperty('--code-bg', isLight ? darkenHex(hex, 0.05) : lightenHex(hex, 0.08));
+            root.style.setProperty('--table-stripe', isLight ? darkenHex(hex, 0.02) : lightenHex(hex, 0.04));
+            root.style.setProperty('--border-color', isLight ? darkenHex(hex, 0.12) : lightenHex(hex, 0.15));
+            root.style.setProperty('--text-primary', isLight ? '#1a1a2e' : '#e2e8f0');
+            root.style.setProperty('--text-secondary', isLight ? '#64748b' : '#94a3b8');
+            root.style.setProperty('--bg-sidebar', isLight ? darkenHex(hex, 0.85) : darkenHex(hex, 0.4));
+            root.style.setProperty('--text-sidebar', '#94a3b8');
+            root.style.setProperty('--text-sidebar-active', isLight ? '#ffffff' : '#e2e8f0');
+
+            document.getElementById('bg-picker').value = hex;
+            document.getElementById('bg-swatch').style.backgroundColor = hex;
+        }
+
         function getSavedAccent() {
             return localStorage.getItem('mb-accent') || null;
+        }
+
+        function getSavedBg() {
+            return localStorage.getItem('mb-bg') || null;
         }
 
         // --- Init ---
         async function init() {
             applyTheme(state.theme);
+            var savedBg = getSavedBg();
+            if (savedBg) {
+                applyBgColor(savedBg);
+            } else {
+                applyBgColor(defaultBgs[state.theme]);
+            }
             var savedAccent = getSavedAccent();
             if (savedAccent) {
                 applyAccentColor(savedAccent);
@@ -635,13 +693,15 @@
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('mb-theme', theme);
         }
+
+        // --- Reset button ---
         document.getElementById('theme-btn').addEventListener('click', function() {
-            state.theme = state.theme === 'light' ? 'dark' : 'light';
-            applyTheme(state.theme);
-            var savedAccent = getSavedAccent();
-            if (!savedAccent) {
-                applyAccentColor(defaultAccents[state.theme]);
-            }
+            state.theme = 'light';
+            localStorage.removeItem('mb-accent');
+            localStorage.removeItem('mb-bg');
+            applyTheme('light');
+            applyBgColor(defaultBgs.light);
+            applyAccentColor(defaultAccents.light);
         });
 
         // --- Accent picker ---
@@ -651,7 +711,19 @@
         });
         document.getElementById('color-swatch').addEventListener('dblclick', function() {
             localStorage.removeItem('mb-accent');
-            applyAccentColor(defaultAccents[state.theme]);
+            var bg = getSavedBg() || defaultBgs[state.theme];
+            var isLight = luminance(bg) > 0.4;
+            applyAccentColor(isLight ? defaultAccents.light : defaultAccents.dark);
+        });
+
+        // --- Background picker ---
+        document.getElementById('bg-picker').addEventListener('input', function(e) {
+            applyBgColor(e.target.value);
+            localStorage.setItem('mb-bg', e.target.value);
+        });
+        document.getElementById('bg-swatch').addEventListener('dblclick', function() {
+            localStorage.removeItem('mb-bg');
+            applyBgColor(defaultBgs.light);
         });
 
         // --- Refresh ---
