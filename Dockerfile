@@ -17,6 +17,7 @@ ENV MEMORY_BANK_DIR=/memory-bank
 ENV LESSONS_DIR=/lessons-learned
 ENV ADRS_DIR=/adrs
 ENV FEATURES_DIR=/features
+ENV NOTES_DIR=/notes
 
 EXPOSE 5000
 

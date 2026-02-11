@@ -4,7 +4,7 @@ import re
 import subprocess
 
 from dotenv import load_dotenv
-from flask import Flask, jsonify, render_template, abort
+from flask import Flask, jsonify, render_template, abort, request
 
 load_dotenv()
 
@@ -49,6 +49,7 @@ MEMORY_BANK_DIR = _dir("MEMORY_BANK_DIR", "memory-bank")
 LESSONS_DIR = _dir("LESSONS_DIR", "docs", "lessons-learned")
 ADRS_DIR = _dir("ADRS_DIR", "docs", "adrs")
 FEATURES_DIR = _dir("FEATURES_DIR", "features")
+NOTES_DIR = _dir("NOTES_DIR", "docs", "notes")
 
 CORE_FILES = [
     {"id": "projectbrief", "filename": "projectbrief.md", "label": "Project Brief"},
@@ -150,6 +151,51 @@ def get_feature(filename):
     return jsonify(_safe_read(FEATURES_DIR, filename))
 
 
+@app.route("/api/notes")
+def list_notes():
+    items = _list_md(NOTES_DIR)
+    return jsonify({"notes": items})
+
+
+@app.route("/api/note/<path:filename>")
+def get_note(filename):
+    return jsonify(_safe_read(NOTES_DIR, filename))
+
+
+@app.route("/api/notes/recent")
+def recent_notes():
+    allowed = {1, 3, 5, 10}
+    try:
+        count = int(request.args.get("count", 5))
+    except (ValueError, TypeError):
+        count = 5
+    if count not in allowed:
+        count = 5
+
+    all_items = _list_md(NOTES_DIR)
+    total = len(all_items)
+    all_items.sort(key=lambda x: x.get("modified", 0), reverse=True)
+    items = all_items[:count]
+
+    result = []
+    for item in items:
+        safe_path = os.path.realpath(os.path.join(NOTES_DIR, item["filename"]))
+        if not safe_path.startswith(NOTES_DIR + os.sep) and safe_path != NOTES_DIR:
+            continue
+        if not os.path.isfile(safe_path):
+            continue
+        with open(safe_path, "r", encoding="utf-8") as fh:
+            content = fh.read()
+        result.append({
+            "filename": item["filename"],
+            "label": item["label"],
+            "content": content,
+            "modified": item["modified"],
+        })
+
+    return jsonify({"notes": result, "total": total})
+
+
 # --- Dashboard helpers ---
 
 def _read_file(path):
@@ -237,6 +283,7 @@ def dashboard_summary():
         "lessons": len(_list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"})),
         "adrs": len(_list_md(ADRS_DIR, exclude={"README.md"})),
         "features": len(_list_md(FEATURES_DIR)),
+        "notes": len(_list_md(NOTES_DIR)),
     }
 
     # --- Recent files ---
@@ -258,6 +305,9 @@ def dashboard_summary():
     for ff in _list_md(FEATURES_DIR):
         all_files.append({"name": ff["label"], "filename": ff["filename"],
                           "source": "feature", "modified": ff["modified"]})
+    for nf in _list_md(NOTES_DIR):
+        all_files.append({"name": nf["label"], "filename": nf["filename"],
+                          "source": "note", "modified": nf["modified"]})
     all_files.sort(key=lambda x: x["modified"] or 0, reverse=True)
     result["recent_files"] = all_files[:8]
 
@@ -270,6 +320,7 @@ if __name__ == "__main__":
     print(f"  Lessons:     {LESSONS_DIR}")
     print(f"  ADRs:        {ADRS_DIR}")
     print(f"  Features:    {FEATURES_DIR}")
+    print(f"  Notes:       {NOTES_DIR}")
     app.run(
         debug=os.environ.get("FLASK_DEBUG", "1") == "1",
         host=os.environ.get("HOST", "127.0.0.1"),

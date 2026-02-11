@@ -13,8 +13,10 @@ services:
       - ../docs/lessons-learned:/lessons-learned:ro
       - ../docs/adrs:/adrs:ro
       - ../features:/features:ro
+      - ../docs/notes:/notes:ro
     environment:
       - MEMORY_BANK_DIR=/memory-bank
       - LESSONS_DIR=/lessons-learned
       - ADRS_DIR=/adrs
       - FEATURES_DIR=/features
+      - NOTES_DIR=/notes

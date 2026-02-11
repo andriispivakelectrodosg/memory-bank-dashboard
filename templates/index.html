@@ -431,6 +431,101 @@
         @media (max-width: 700px) {
             .dashboard-grid { grid-template-columns: 1fr; }
         }
+
+        /* Notes Feed */
+        .notes-feed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .notes-feed-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .notes-feed-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .notes-feed-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-right: 0.25rem;
+        }
+
+        .notes-count-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 0.3rem 0.65rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+
+        .notes-count-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .notes-count-btn.active {
+            background: var(--accent);
+            color: #ffffff;
+            border-color: var(--accent);
+        }
+
+        .notes-feed-showing {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-left: 0.5rem;
+        }
+
+        .note-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .note-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .note-card-title {
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: var(--accent);
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .note-card-title:hover { text-decoration: underline; }
+
+        .note-card-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        .note-card-body { font-size: 0.92rem; }
+        .note-card-body h1 { display: none; }
     </style>
 </head>
 <body>
@@ -478,8 +573,10 @@
             currentSource: null,
             showDashboard: true,
             dashboardData: null,
-            files: [], tasks: [], lessons: [], adrs: [], features: [],
+            files: [], tasks: [], lessons: [], adrs: [], features: [], notes: [],
             hasLessonIndex: false, hasAdrIndex: false,
+            showNotesFeed: false,
+            notesFeedCount: parseInt(localStorage.getItem('mb-notes-count')) || 5,
             theme: localStorage.getItem('mb-theme') || 'light',
         };
 
@@ -593,12 +690,13 @@
 
         // --- API ---
         async function loadManifest() {
-            const [filesRes, tasksRes, lessonsRes, adrsRes, featuresRes] = await Promise.all([
+            const [filesRes, tasksRes, lessonsRes, adrsRes, featuresRes, notesRes] = await Promise.all([
                 fetch('/api/files').then(function(r) { return r.json(); }),
                 fetch('/api/tasks').then(function(r) { return r.json(); }),
                 fetch('/api/lessons').then(function(r) { return r.json(); }),
                 fetch('/api/adrs').then(function(r) { return r.json(); }),
                 fetch('/api/features').then(function(r) { return r.json(); }),
+                fetch('/api/notes').then(function(r) { return r.json(); }),
             ]);
             state.files = filesRes.files;
             state.tasks = tasksRes.tasks;
@@ -607,6 +705,7 @@
             state.adrs = adrsRes.adrs;
             state.hasAdrIndex = adrsRes.has_index;
             state.features = featuresRes.features;
+            state.notes = notesRes.notes;
         }
 
         // --- Source-to-API mapping ---
@@ -615,6 +714,7 @@
             'lesson': '/api/lesson/',
             'adr': '/api/adr/',
             'feature': '/api/feature/',
+            'note': '/api/note/',
         };
 
         var sourceLabel = {
@@ -622,10 +722,12 @@
             'lesson': 'lessons-learned/',
             'adr': 'adrs/',
             'feature': 'features/',
+            'note': 'notes/',
         };
 
         async function loadFile(filename, source) {
             state.showDashboard = false;
+            state.showNotesFeed = false;
             source = source || 'memory-bank';
             state.currentFile = filename;
             state.currentSource = source;
@@ -672,6 +774,12 @@
                     } else {
                         addBreadcrumb(body, null, null, filename.replace('.md', ''), 'ADRs');
                     }
+                }
+
+                // Breadcrumb for note detail pages
+                if (source === 'note') {
+                    addBreadcrumb(body, 'Notes Feed', function() { showNotesFeed(); },
+                        filename.replace('.md', ''));
                 }
 
                 // Linkify references
@@ -762,6 +870,24 @@
                     });
                 } else {
                     body.appendChild(el('div', 'sidebar-empty', 'No features yet'));
+                }
+            });
+
+            // Notes
+            addSection(sidebar, 'notes', 'Notes', state.notes.length, function(body) {
+                // Notes Feed link at top
+                var feedItem = el('div', 'sidebar-item', 'Notes Feed');
+                feedItem.dataset.filename = '__notes_feed__';
+                feedItem.dataset.source = '__notes_feed__';
+                feedItem.addEventListener('click', function() { showNotesFeed(); });
+                body.appendChild(feedItem);
+
+                if (state.notes.length > 0) {
+                    state.notes.forEach(function(n) {
+                        body.appendChild(sidebarItem(n.label, n.filename, 'note', true));
+                    });
+                } else {
+                    body.appendChild(el('div', 'sidebar-empty', 'No notes yet'));
                 }
             });
         }
@@ -862,6 +988,7 @@
         // --- Dashboard ---
         async function showDashboard() {
             state.showDashboard = true;
+            state.showNotesFeed = false;
             state.currentFile = '__dashboard__';
             state.currentSource = '__dashboard__';
             updateActiveState();
@@ -906,6 +1033,81 @@
 
             // Recent files
             container.appendChild(buildRecentCard(data.recent_files));
+
+            body.appendChild(container);
+        }
+
+        // --- Notes Feed ---
+        async function showNotesFeed(count) {
+            count = count || state.notesFeedCount;
+            state.notesFeedCount = count;
+            localStorage.setItem('mb-notes-count', String(count));
+            state.showDashboard = false;
+            state.showNotesFeed = true;
+            state.currentFile = '__notes_feed__';
+            state.currentSource = '__notes_feed__';
+            updateActiveState();
+
+            var body = document.getElementById('markdown-body');
+            var meta = document.getElementById('content-meta');
+            meta.style.display = 'none';
+            body.innerHTML = '<div class="loading">Loading notes...</div>';
+
+            try {
+                var res = await fetch('/api/notes/recent?count=' + count);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var data = await res.json();
+                renderNotesFeed(data.notes, data.total, count);
+            } catch (err) {
+                body.innerHTML = '<div class="error">Failed to load notes: ' + err.message + '</div>';
+            }
+        }
+
+        function renderNotesFeed(notes, total, activeCount) {
+            var body = document.getElementById('markdown-body');
+            body.innerHTML = '';
+            var container = el('div', 'dashboard');
+
+            // Header with title + count selector
+            var header = el('div', 'notes-feed-header');
+            header.appendChild(el('h2', 'notes-feed-title', 'Notes'));
+
+            var controls = el('div', 'notes-feed-controls');
+            controls.appendChild(el('span', 'notes-feed-label', 'Show:'));
+
+            [1, 3, 5, 10].forEach(function(n) {
+                var btn = el('button', 'notes-count-btn' + (n === activeCount ? ' active' : ''), String(n));
+                btn.addEventListener('click', function() { showNotesFeed(n); });
+                controls.appendChild(btn);
+            });
+
+            controls.appendChild(el('span', 'notes-feed-showing',
+                'Showing ' + notes.length + ' of ' + total));
+
+            header.appendChild(controls);
+            container.appendChild(header);
+
+            // Note cards
+            if (notes.length === 0) {
+                container.appendChild(el('p', 'sidebar-empty', 'No notes found.'));
+            } else {
+                notes.forEach(function(note) {
+                    var card = el('div', 'note-card');
+
+                    var cardHeader = el('div', 'note-card-header');
+                    var cardTitle = el('h3', 'note-card-title', note.label);
+                    cardTitle.addEventListener('click', function() { loadFile(note.filename, 'note'); });
+                    cardHeader.appendChild(cardTitle);
+                    cardHeader.appendChild(el('span', 'note-card-time', timeAgo(note.modified)));
+                    card.appendChild(cardHeader);
+
+                    var cardBody = el('div', 'note-card-body markdown-body');
+                    cardBody.innerHTML = marked.parse(note.content);
+                    card.appendChild(cardBody);
+
+                    container.appendChild(card);
+                });
+            }
 
             body.appendChild(container);
         }
@@ -992,6 +1194,7 @@
                 { label: 'Lessons Learned', count: String(counts.lessons) },
                 { label: 'ADRs', count: String(counts.adrs) },
                 { label: 'Features', count: String(counts.features) },
+                { label: 'Notes', count: String(counts.notes) },
             ];
             items.forEach(function(item) {
                 var row = el('div', 'dashboard-row');
@@ -1044,7 +1247,7 @@
             }
             var table = document.createElement('table');
             table.className = 'recent-table';
-            var sourceNames = { 'memory-bank': 'Core', 'lesson': 'Lesson', 'adr': 'ADR', 'feature': 'Feature' };
+            var sourceNames = { 'memory-bank': 'Core', 'lesson': 'Lesson', 'adr': 'ADR', 'feature': 'Feature', 'note': 'Note' };
             files.forEach(function(f) {
                 var tr = document.createElement('tr');
                 var tdName = el('td', '', f.name);
@@ -1115,7 +1318,9 @@
         document.getElementById('refresh-btn').addEventListener('click', async function() {
             await loadManifest();
             buildSidebar();
-            if (state.showDashboard) {
+            if (state.showNotesFeed) {
+                showNotesFeed();
+            } else if (state.showDashboard) {
                 showDashboard();
             } else if (state.currentFile) {
                 loadFile(state.currentFile, state.currentSource);
@@ -1124,7 +1329,9 @@
 
         // --- Auto-refresh (30s) ---
         setInterval(function() {
-            if (state.showDashboard) {
+            if (state.showNotesFeed) {
+                showNotesFeed();
+            } else if (state.showDashboard) {
                 showDashboard();
             } else if (state.currentFile) {
                 loadFile(state.currentFile, state.currentSource);
