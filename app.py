@@ -1,5 +1,6 @@
 """Memory Bank Dashboard -- Read-Only Flask App"""
 import os
+import re
 import subprocess
 
 from dotenv import load_dotenv
@@ -147,6 +148,120 @@ def list_features():
 @app.route("/api/feature/<path:filename>")
 def get_feature(filename):
     return jsonify(_safe_read(FEATURES_DIR, filename))
+
+
+# --- Dashboard helpers ---
+
+def _read_file(path):
+    if not os.path.isfile(path):
+        return ""
+    with open(path, "r", encoding="utf-8") as fh:
+        return fh.read()
+
+
+def _parse_section(content, heading):
+    pattern = r"##\s+" + re.escape(heading) + r"\s*\n(.*?)(?=\n##\s|\Z)"
+    m = re.search(pattern, content, re.DOTALL)
+    return m.group(1).strip() if m else ""
+
+
+def _parse_list_items(text):
+    return [
+        line.strip()[2:].strip()
+        for line in text.split("\n")
+        if line.strip().startswith("- ") and not line.strip().startswith("- _")
+    ]
+
+
+def _count_table_rows(text):
+    rows = [l for l in text.split("\n") if l.strip().startswith("|")]
+    return max(0, len(rows) - 2)
+
+
+@app.route("/api/dashboard")
+def dashboard_summary():
+    result = {}
+
+    # --- Progress ---
+    content = _read_file(os.path.join(MEMORY_BANK_DIR, "progress.md"))
+    status_section = _parse_section(content, "Current Status")
+    works_section = _parse_section(content, "What Works")
+    left_section = _parse_section(content, "What's Left")
+    milestones_section = _parse_section(content, "Milestones")
+    issues_section = _parse_section(content, "Known Issues")
+
+    result["progress"] = {
+        "current_status": status_section.split("\n")[0] if status_section else "",
+        "what_works": len([l for l in works_section.split("\n") if "✅" in l or "[x]" in l.lower()]),
+        "whats_left": len([l for l in left_section.split("\n") if "[ ]" in l]),
+        "milestones_done": len(re.findall(r"- \[x\]", milestones_section, re.IGNORECASE)),
+        "milestones_total": len(re.findall(r"- \[[x ]\]", milestones_section, re.IGNORECASE)),
+        "known_issues": _count_table_rows(issues_section),
+    }
+
+    # --- Tasks ---
+    content = _read_file(os.path.join(MEMORY_BANK_DIR, "tasks", "_index.md"))
+    result["tasks"] = {
+        "in_progress": _parse_list_items(_parse_section(content, "In Progress")),
+        "pending": _parse_list_items(_parse_section(content, "Pending")),
+        "completed": _parse_list_items(_parse_section(content, "Completed")),
+        "abandoned": _parse_list_items(_parse_section(content, "Abandoned")),
+    }
+
+    # --- Active Context ---
+    content = _read_file(os.path.join(MEMORY_BANK_DIR, "activeContext.md"))
+    focus = _parse_section(content, "Current Focus")
+    steps_section = _parse_section(content, "Next Steps")
+    blockers_section = _parse_section(content, "Blockers")
+
+    steps = [
+        re.sub(r"^\d+\.\s*", "", l.strip())
+        for l in steps_section.split("\n")
+        if re.match(r"^\d+\.", l.strip())
+    ]
+
+    blockers_raw = _parse_list_items(blockers_section)
+    blockers = [b for b in blockers_raw if "none" not in b.lower()]
+
+    result["active_context"] = {
+        "current_focus": focus.split("\n")[0] if focus else "",
+        "next_steps": steps,
+        "blockers": blockers,
+    }
+
+    # --- Counts ---
+    result["counts"] = {
+        "core_files": len([f for f in CORE_FILES if os.path.isfile(os.path.join(MEMORY_BANK_DIR, f["filename"]))]),
+        "core_files_total": len(CORE_FILES),
+        "tasks": len(_list_md(os.path.join(MEMORY_BANK_DIR, "tasks"), exclude={"_index.md"})),
+        "lessons": len(_list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"})),
+        "adrs": len(_list_md(ADRS_DIR, exclude={"README.md"})),
+        "features": len(_list_md(FEATURES_DIR)),
+    }
+
+    # --- Recent files ---
+    all_files = []
+    for f in CORE_FILES:
+        p = os.path.join(MEMORY_BANK_DIR, f["filename"])
+        if os.path.isfile(p):
+            all_files.append({"name": f["label"], "filename": f["filename"],
+                              "source": "memory-bank", "modified": os.path.getmtime(p)})
+    for tf in _list_md(os.path.join(MEMORY_BANK_DIR, "tasks"), exclude={"_index.md"}):
+        all_files.append({"name": tf["label"], "filename": f"tasks/{tf['filename']}",
+                          "source": "memory-bank", "modified": tf["modified"]})
+    for lf in _list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"}):
+        all_files.append({"name": lf["label"], "filename": lf["filename"],
+                          "source": "lesson", "modified": lf["modified"]})
+    for af in _list_md(ADRS_DIR, exclude={"README.md"}):
+        all_files.append({"name": af["label"], "filename": af["filename"],
+                          "source": "adr", "modified": af["modified"]})
+    for ff in _list_md(FEATURES_DIR):
+        all_files.append({"name": ff["label"], "filename": ff["filename"],
+                          "source": "feature", "modified": ff["modified"]})
+    all_files.sort(key=lambda x: x["modified"] or 0, reverse=True)
+    result["recent_files"] = all_files[:8]
+
+    return jsonify(result)
 
 
 if __name__ == "__main__":

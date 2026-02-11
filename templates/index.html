@@ -283,6 +283,154 @@
 
         .task-link { color: var(--accent) !important; cursor: pointer; font-weight: 600; }
         .task-link:hover { text-decoration: underline !important; }
+
+        /* Dashboard */
+        .dashboard { max-width: 900px; }
+
+        .dashboard-banner {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-banner h2 {
+            font-size: 1rem;
+            margin: 0 0 0.4rem;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .dashboard-banner p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .dashboard-banner .focus-text {
+            margin-top: 0.35rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-card {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.15rem 1.35rem;
+        }
+
+        .dashboard-card h3 {
+            font-size: 0.72rem;
+            margin: 0 0 0.65rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .dashboard-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.3rem 0.4rem;
+            font-size: 0.88rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .dashboard-row:hover { background: var(--sidebar-active-bg); }
+
+        .dashboard-row .label { flex: 1; display: flex; align-items: center; }
+        .dashboard-row .count {
+            font-weight: 700;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 0.82rem;
+            color: var(--accent);
+        }
+
+        .bar-track {
+            background: var(--border-color);
+            border-radius: 6px;
+            height: 7px;
+            margin: 0.25rem 0 0.45rem;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.4s ease;
+        }
+
+        .bar-green { background: #22c55e; }
+        .bar-amber { background: #f59e0b; }
+        .bar-accent { background: var(--accent); }
+
+        .status-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            flex-shrink: 0;
+        }
+
+        .dot-green { background: #22c55e; }
+        .dot-blue { background: #3b82f6; }
+        .dot-gray { background: #94a3b8; }
+        .dot-red { background: #ef4444; }
+
+        .dbadge {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .dbadge-green { background: rgba(34,197,94,0.15); color: #22c55e; }
+        .dbadge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+        .dashboard-steps {
+            padding-left: 1.15rem;
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .dashboard-steps li { margin-bottom: 0.25rem; line-height: 1.5; }
+
+        .recent-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+        .recent-table tr { cursor: pointer; border-bottom: 1px solid var(--border-color); }
+        .recent-table tr:last-child { border-bottom: none; }
+        .recent-table tr:hover { background: var(--sidebar-active-bg); }
+        .recent-table td { padding: 0.4rem 0.5rem; }
+
+        .source-tag {
+            font-size: 0.68rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            background: rgba(59,130,246,0.12);
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 700px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -328,6 +476,8 @@
         const state = {
             currentFile: null,
             currentSource: null,
+            showDashboard: true,
+            dashboardData: null,
             files: [], tasks: [], lessons: [], adrs: [], features: [],
             hasLessonIndex: false, hasAdrIndex: false,
             theme: localStorage.getItem('mb-theme') || 'light',
@@ -437,7 +587,7 @@
             marked.setOptions({ gfm: true, breaks: false });
             await loadManifest();
             buildSidebar();
-            if (state.files.length > 0) { loadFile(state.files[0].filename); }
+            showDashboard();
         }
         document.addEventListener('DOMContentLoaded', init);
 
@@ -475,6 +625,7 @@
         };
 
         async function loadFile(filename, source) {
+            state.showDashboard = false;
             source = source || 'memory-bank';
             state.currentFile = filename;
             state.currentSource = source;
@@ -551,6 +702,12 @@
         function buildSidebar() {
             var sidebar = document.getElementById('sidebar');
             sidebar.innerHTML = '';
+
+            // Dashboard link
+            var dashItem = sidebarItem('\u2302 Dashboard', '__dashboard__', '__dashboard__');
+            dashItem.addEventListener('click', function(e) { e.stopPropagation(); showDashboard(); });
+            dashItem.removeEventListener = null; // prevent double-bind
+            sidebar.appendChild(dashItem);
 
             // Core Files
             addSection(sidebar, 'core', 'Core Files', state.files.length, function(body) {
@@ -702,6 +859,219 @@
             });
         }
 
+        // --- Dashboard ---
+        async function showDashboard() {
+            state.showDashboard = true;
+            state.currentFile = '__dashboard__';
+            state.currentSource = '__dashboard__';
+            updateActiveState();
+
+            var body = document.getElementById('markdown-body');
+            var meta = document.getElementById('content-meta');
+            meta.style.display = 'none';
+            body.innerHTML = '<div class="loading">Loading dashboard...</div>';
+
+            try {
+                var res = await fetch('/api/dashboard');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                state.dashboardData = await res.json();
+                renderDashboard(state.dashboardData);
+            } catch (err) {
+                body.innerHTML = '<div class="error">Failed to load dashboard: ' + err.message + '</div>';
+            }
+        }
+
+        function renderDashboard(data) {
+            var body = document.getElementById('markdown-body');
+            body.innerHTML = '';
+            var container = el('div', 'dashboard');
+
+            // Status banner
+            var banner = el('div', 'dashboard-banner');
+            banner.appendChild(el('h2', '', 'Project Status'));
+            banner.appendChild(el('p', '', data.progress.current_status || 'No status available'));
+            if (data.active_context.current_focus) {
+                var focus = el('p', 'focus-text', 'Focus: ' + data.active_context.current_focus);
+                banner.appendChild(focus);
+            }
+            container.appendChild(banner);
+
+            // Grid
+            var grid = el('div', 'dashboard-grid');
+            grid.appendChild(buildProgressCard(data.progress));
+            grid.appendChild(buildTasksCard(data.tasks));
+            grid.appendChild(buildInventoryCard(data.counts));
+            grid.appendChild(buildNextStepsCard(data.active_context));
+            container.appendChild(grid);
+
+            // Recent files
+            container.appendChild(buildRecentCard(data.recent_files));
+
+            body.appendChild(container);
+        }
+
+        function buildProgressCard(p) {
+            var card = el('div', 'dashboard-card');
+            card.appendChild(el('h3', '', 'Progress'));
+
+            var total = p.what_works + p.whats_left;
+
+            // What Works bar
+            var r1 = el('div', 'dashboard-row');
+            r1.innerHTML = '<span class="label">What Works</span><span class="count">' + p.what_works + '</span>';
+            r1.style.cursor = 'default';
+            card.appendChild(r1);
+            var t1 = el('div', 'bar-track');
+            var f1 = el('div', 'bar-fill bar-green');
+            f1.style.width = (total > 0 ? Math.round(100 * p.what_works / total) : 0) + '%';
+            t1.appendChild(f1);
+            card.appendChild(t1);
+
+            // What's Left bar
+            var r2 = el('div', 'dashboard-row');
+            r2.innerHTML = '<span class="label">What\'s Left</span><span class="count">' + p.whats_left + '</span>';
+            r2.style.cursor = 'default';
+            card.appendChild(r2);
+            var t2 = el('div', 'bar-track');
+            var f2 = el('div', 'bar-fill bar-amber');
+            f2.style.width = (total > 0 ? Math.round(100 * p.whats_left / total) : 0) + '%';
+            t2.appendChild(f2);
+            card.appendChild(t2);
+
+            // Milestones
+            var pct = p.milestones_total > 0 ? Math.round(100 * p.milestones_done / p.milestones_total) : 0;
+            var r3 = el('div', 'dashboard-row');
+            r3.innerHTML = '<span class="label">Milestones</span><span class="count">' + p.milestones_done + '/' + p.milestones_total + '</span>';
+            r3.addEventListener('click', function() { loadFile('progress.md'); });
+            card.appendChild(r3);
+            var t3 = el('div', 'bar-track');
+            var f3 = el('div', 'bar-fill bar-accent');
+            f3.style.width = pct + '%';
+            t3.appendChild(f3);
+            card.appendChild(t3);
+
+            // Known Issues
+            if (p.known_issues > 0) {
+                var r4 = el('div', 'dashboard-row');
+                r4.innerHTML = '<span class="label">Known Issues</span><span class="dbadge dbadge-red">' + p.known_issues + '</span>';
+                r4.addEventListener('click', function() { loadFile('progress.md'); });
+                card.appendChild(r4);
+            }
+
+            return card;
+        }
+
+        function buildTasksCard(tasks) {
+            var card = el('div', 'dashboard-card');
+            card.appendChild(el('h3', '', 'Tasks'));
+
+            var statuses = [
+                { key: 'in_progress', label: 'In Progress', dot: 'dot-green' },
+                { key: 'pending', label: 'Pending', dot: 'dot-blue' },
+                { key: 'completed', label: 'Completed', dot: 'dot-gray' },
+                { key: 'abandoned', label: 'Abandoned', dot: 'dot-red' },
+            ];
+            statuses.forEach(function(s) {
+                var row = el('div', 'dashboard-row');
+                row.innerHTML = '<span class="label"><span class="status-dot ' + s.dot + '"></span>' + s.label + '</span>'
+                    + '<span class="count">' + tasks[s.key].length + '</span>';
+                row.addEventListener('click', function() { loadFile('tasks/_index.md'); });
+                card.appendChild(row);
+            });
+
+            return card;
+        }
+
+        function buildInventoryCard(counts) {
+            var card = el('div', 'dashboard-card');
+            card.appendChild(el('h3', '', 'Inventory'));
+
+            var items = [
+                { label: 'Core Files', count: counts.core_files + '/' + counts.core_files_total },
+                { label: 'Tasks', count: String(counts.tasks) },
+                { label: 'Lessons Learned', count: String(counts.lessons) },
+                { label: 'ADRs', count: String(counts.adrs) },
+                { label: 'Features', count: String(counts.features) },
+            ];
+            items.forEach(function(item) {
+                var row = el('div', 'dashboard-row');
+                row.innerHTML = '<span class="label">' + item.label + '</span><span class="count">' + item.count + '</span>';
+                row.style.cursor = 'default';
+                card.appendChild(row);
+            });
+
+            return card;
+        }
+
+        function buildNextStepsCard(ac) {
+            var card = el('div', 'dashboard-card');
+            card.appendChild(el('h3', '', 'Next Steps & Blockers'));
+
+            if (ac.next_steps.length > 0) {
+                var ol = document.createElement('ol');
+                ol.className = 'dashboard-steps';
+                ac.next_steps.forEach(function(step) {
+                    ol.appendChild(el('li', '', step));
+                });
+                card.appendChild(ol);
+            } else {
+                card.appendChild(el('p', '', 'No next steps defined'));
+            }
+
+            var hr = document.createElement('hr');
+            hr.style.cssText = 'border:none;border-top:1px solid var(--border-color);margin:0.65rem 0;';
+            card.appendChild(hr);
+
+            if (ac.blockers.length === 0) {
+                card.appendChild(el('span', 'dbadge dbadge-green', 'No blockers'));
+            } else {
+                ac.blockers.forEach(function(b) {
+                    var bd = el('div', 'dbadge dbadge-red', b);
+                    bd.style.marginBottom = '0.3rem';
+                    card.appendChild(bd);
+                });
+            }
+
+            return card;
+        }
+
+        function buildRecentCard(files) {
+            var card = el('div', 'dashboard-banner');
+            card.appendChild(el('h3', '', 'Recently Modified'));
+            if (!files || files.length === 0) {
+                card.appendChild(el('p', '', 'No files found'));
+                return card;
+            }
+            var table = document.createElement('table');
+            table.className = 'recent-table';
+            var sourceNames = { 'memory-bank': 'Core', 'lesson': 'Lesson', 'adr': 'ADR', 'feature': 'Feature' };
+            files.forEach(function(f) {
+                var tr = document.createElement('tr');
+                var tdName = el('td', '', f.name);
+                tdName.style.fontWeight = '500';
+                var tdSource = document.createElement('td');
+                tdSource.innerHTML = '<span class="source-tag">' + (sourceNames[f.source] || f.source) + '</span>';
+                var tdTime = el('td', '', timeAgo(f.modified));
+                tdTime.style.cssText = 'color:var(--text-secondary);text-align:right;';
+                tr.appendChild(tdName);
+                tr.appendChild(tdSource);
+                tr.appendChild(tdTime);
+                tr.addEventListener('click', function() { loadFile(f.filename, f.source); });
+                table.appendChild(tr);
+            });
+            card.appendChild(table);
+            return card;
+        }
+
+        function timeAgo(epoch) {
+            if (!epoch) return 'unknown';
+            var seconds = Math.floor(Date.now() / 1000 - epoch);
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            return Math.floor(seconds / 86400) + 'd ago';
+        }
+
         // --- Theme ---
         function applyTheme(theme) {
             document.documentElement.setAttribute('data-theme', theme);
@@ -745,12 +1115,20 @@
         document.getElementById('refresh-btn').addEventListener('click', async function() {
             await loadManifest();
             buildSidebar();
-            if (state.currentFile) loadFile(state.currentFile, state.currentSource);
+            if (state.showDashboard) {
+                showDashboard();
+            } else if (state.currentFile) {
+                loadFile(state.currentFile, state.currentSource);
+            }
         });
 
         // --- Auto-refresh (30s) ---
         setInterval(function() {
-            if (state.currentFile) loadFile(state.currentFile, state.currentSource);
+            if (state.showDashboard) {
+                showDashboard();
+            } else if (state.currentFile) {
+                loadFile(state.currentFile, state.currentSource);
+            }
         }, 30000);
 
         // --- Helpers ---
