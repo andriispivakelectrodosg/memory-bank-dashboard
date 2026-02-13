@@ -626,6 +626,111 @@
                 width: 100%;
             }
         }
+
+        /* Tag Cloud */
+        .tag-cloud-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag-cloud-container h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tag-cloud-item {
+            display: inline-block;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            background: rgba(59,130,246,0.1);
+            color: var(--accent);
+            cursor: default;
+            transition: background 0.15s, transform 0.15s;
+            line-height: 1.3;
+            white-space: nowrap;
+        }
+
+        .tag-cloud-item:hover {
+            background: rgba(59,130,246,0.2);
+            transform: scale(1.05);
+        }
+
+        /* Tag List Page */
+        .tag-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tag-list-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .tag-list-stats {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .tag-list-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .tag-list-entry {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+
+        .tag-list-name {
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tag-list-count {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            flex-shrink: 0;
+            margin-left: 0.5rem;
+        }
+
+        .tag-list-bar {
+            height: 3px;
+            background: var(--accent);
+            border-radius: 2px;
+            margin-top: 0.3rem;
+            opacity: 0.5;
+        }
     </style>
 </head>
 <body>
@@ -676,6 +781,7 @@
             files: [], tasks: [], lessons: [], adrs: [], features: [], notes: [],
             hasLessonIndex: false, hasAdrIndex: false,
             showNotesFeed: false,
+            showTagsPage: false,
             notesFeedCount: parseInt(localStorage.getItem('mb-notes-count')) || 5,
             theme: localStorage.getItem('mb-theme') || 'light',
         };
@@ -828,6 +934,7 @@
         async function loadFile(filename, source) {
             state.showDashboard = false;
             state.showNotesFeed = false;
+            state.showTagsPage = false;
             source = source || 'memory-bank';
             state.currentFile = filename;
             state.currentSource = source;
@@ -886,8 +993,10 @@
                 if (source === 'memory-bank' && filename === 'tasks/_index.md') linkifyTaskReferences(body);
                 if (source === 'lesson' && filename === 'lesson-learned-index.md') {
                     linkifyLessonReferences(body);
-                    // Fetch tag data and prepend chart
+                    // Fetch tag data and prepend chart + cloud
                     fetch('/api/lessons/tags').then(function(r) { return r.json(); }).then(function(tagData) {
+                        var cloud = buildTagCloud(tagData.tags);
+                        body.prepend(cloud);
                         var chart = buildTagChart(tagData.tags, tagData.total_lessons);
                         body.prepend(chart);
                     }).catch(function() { /* silently skip chart on error */ });
@@ -945,6 +1054,12 @@
                 if (state.hasLessonIndex) {
                     body.appendChild(sidebarItem('Lessons Index', 'lesson-learned-index.md', 'lesson'));
                 }
+                // All Tags link
+                var tagsItem = el('div', 'sidebar-item', 'All Tags');
+                tagsItem.dataset.filename = '__tags_page__';
+                tagsItem.dataset.source = '__tags_page__';
+                tagsItem.addEventListener('click', function() { showTagsPage(); });
+                body.appendChild(tagsItem);
                 if (state.lessons.length > 0) {
                     state.lessons.forEach(function(l) {
                         body.appendChild(sidebarItem(l.label, l.filename, 'lesson', true));
@@ -1096,6 +1211,7 @@
         async function showDashboard() {
             state.showDashboard = true;
             state.showNotesFeed = false;
+            state.showTagsPage = false;
             state.currentFile = '__dashboard__';
             state.currentSource = '__dashboard__';
             updateActiveState();
@@ -1151,6 +1267,7 @@
             localStorage.setItem('mb-notes-count', String(count));
             state.showDashboard = false;
             state.showNotesFeed = true;
+            state.showTagsPage = false;
             state.currentFile = '__notes_feed__';
             state.currentSource = '__notes_feed__';
             updateActiveState();
@@ -1364,8 +1481,8 @@
                 return container;
             }
 
-            // Top 15 tags, group rest as "Other"
-            var maxTags = 15;
+            // Top 25 tags, group rest as "Other"
+            var maxTags = 25;
             var displayTags = tags.slice(0, maxTags);
             var otherCount = 0;
             for (var i = maxTags; i < tags.length; i++) {
@@ -1433,6 +1550,103 @@
             container.appendChild(legend);
 
             return container;
+        }
+
+        function buildTagCloud(tags) {
+            var container = el('div', 'tag-cloud-container');
+            container.appendChild(el('h3', '', 'Tag Cloud'));
+
+            if (!tags || tags.length === 0) {
+                container.appendChild(el('p', '', 'No tags found.'));
+                return container;
+            }
+
+            var cloud = el('div', 'tag-cloud');
+            var maxCount = tags[0].count;
+            var minCount = tags[tags.length - 1].count;
+            var range = Math.max(maxCount - minCount, 1);
+
+            tags.forEach(function(tag) {
+                var item = el('span', 'tag-cloud-item', tag.name + ' (' + tag.count + ')');
+                // Scale font from 0.7rem to 1.6rem based on count
+                var scale = (tag.count - minCount) / range;
+                var fontSize = 0.7 + scale * 0.9;
+                item.style.fontSize = fontSize + 'rem';
+                item.style.fontWeight = scale > 0.5 ? '600' : '400';
+                cloud.appendChild(item);
+            });
+
+            container.appendChild(cloud);
+            return container;
+        }
+
+        // --- Tags Page ---
+        async function showTagsPage() {
+            state.showDashboard = false;
+            state.showNotesFeed = false;
+            state.showTagsPage = true;
+            state.currentFile = '__tags_page__';
+            state.currentSource = '__tags_page__';
+            updateActiveState();
+
+            var body = document.getElementById('markdown-body');
+            var meta = document.getElementById('content-meta');
+            meta.style.display = 'none';
+            body.innerHTML = '<div class="loading">Loading tags...</div>';
+
+            try {
+                var res = await fetch('/api/lessons/tags');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var data = await res.json();
+                renderTagsPage(data.tags, data.total_lessons);
+            } catch (err) {
+                body.innerHTML = '<div class="error">Failed to load tags: ' + err.message + '</div>';
+            }
+        }
+
+        function renderTagsPage(tags, totalLessons) {
+            var body = document.getElementById('markdown-body');
+            body.innerHTML = '';
+            var container = el('div', 'dashboard');
+
+            // Header
+            var header = el('div', 'tag-list-header');
+            header.appendChild(el('h2', '', 'All Tags'));
+            header.appendChild(el('span', 'tag-list-stats',
+                tags.length + ' tags across ' + totalLessons + ' lessons'));
+            container.appendChild(header);
+
+            // Tag cloud at top
+            container.appendChild(buildTagCloud(tags));
+
+            // Alphabetical sorted list
+            var listSection = el('div', 'tag-cloud-container');
+            listSection.appendChild(el('h3', '', 'Alphabetical List'));
+
+            if (tags.length === 0) {
+                listSection.appendChild(el('p', '', 'No tags found.'));
+            } else {
+                var sorted = tags.slice().sort(function(a, b) {
+                    return a.name.localeCompare(b.name);
+                });
+
+                var maxCount = tags[0].count; // tags is sorted by count desc from API
+
+                var grid = el('div', 'tag-list-grid');
+                sorted.forEach(function(tag) {
+                    var entry = el('div', 'tag-list-entry');
+                    entry.appendChild(el('span', 'tag-list-name', tag.name));
+                    entry.appendChild(el('span', 'tag-list-count', String(tag.count)));
+                    var bar = el('div', 'tag-list-bar');
+                    bar.style.width = Math.max(5, Math.round(100 * tag.count / maxCount)) + '%';
+                    entry.appendChild(bar);
+                    grid.appendChild(entry);
+                });
+                listSection.appendChild(grid);
+            }
+
+            container.appendChild(listSection);
+            body.appendChild(container);
         }
 
         function buildRecentCard(files) {
@@ -1515,7 +1729,9 @@
         document.getElementById('refresh-btn').addEventListener('click', async function() {
             await loadManifest();
             buildSidebar();
-            if (state.showNotesFeed) {
+            if (state.showTagsPage) {
+                showTagsPage();
+            } else if (state.showNotesFeed) {
                 showNotesFeed();
             } else if (state.showDashboard) {
                 showDashboard();
@@ -1526,7 +1742,9 @@
 
         // --- Auto-refresh (30s) ---
         setInterval(function() {
-            if (state.showNotesFeed) {
+            if (state.showTagsPage) {
+                showTagsPage();
+            } else if (state.showNotesFeed) {
                 showNotesFeed();
             } else if (state.showDashboard) {
                 showDashboard();
