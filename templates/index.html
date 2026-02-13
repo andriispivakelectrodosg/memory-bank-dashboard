@@ -731,6 +731,107 @@
             margin-top: 0.3rem;
             opacity: 0.5;
         }
+
+        /* Tag Results Page */
+        .tag-results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .tag-results-header h2 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 0;
+        }
+
+        .tag-results-tag {
+            display: inline-block;
+            background: var(--accent);
+            color: #fff;
+            padding: 0.15rem 0.6rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .tag-results-count {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .tag-result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.7rem 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .tag-result-item:hover {
+            border-color: var(--accent);
+            background: var(--sidebar-active-bg);
+        }
+
+        .tag-result-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tag-result-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            margin-left: 1rem;
+        }
+
+        .tag-result-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .tag-result-tags .mini-tag {
+            font-size: 0.68rem;
+            padding: 0.1rem 0.4rem;
+            border-radius: 4px;
+            background: rgba(59,130,246,0.1);
+            color: var(--accent);
+            cursor: pointer;
+        }
+
+        .tag-result-tags .mini-tag:hover {
+            background: rgba(59,130,246,0.25);
+        }
+
+        .tag-result-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* Make clickable tags look clickable */
+        .tag-cloud-item { cursor: pointer; }
+        .tag-legend-item.clickable { cursor: pointer; }
+        .tag-legend-item.clickable:hover .tag-legend-name { color: var(--accent); }
+        .tag-list-entry.clickable { cursor: pointer; transition: border-color 0.15s; }
+        .tag-list-entry.clickable:hover { border-color: var(--accent); }
     </style>
 </head>
 <body>
@@ -1539,12 +1640,13 @@
             // Legend
             var legend = el('div', 'tag-legend');
             displayTags.forEach(function(tag, idx) {
-                var item = el('div', 'tag-legend-item');
+                var item = el('div', 'tag-legend-item clickable');
                 var dot = el('span', 'tag-legend-dot');
                 dot.style.backgroundColor = TAG_COLORS[idx % TAG_COLORS.length];
                 item.appendChild(dot);
                 item.appendChild(el('span', 'tag-legend-name', tag.name));
                 item.appendChild(el('span', 'tag-legend-count', String(tag.count)));
+                item.addEventListener('click', function() { showTagLessons(tag.name); });
                 legend.appendChild(item);
             });
             container.appendChild(legend);
@@ -1573,6 +1675,7 @@
                 var fontSize = 0.7 + scale * 0.9;
                 item.style.fontSize = fontSize + 'rem';
                 item.style.fontWeight = scale > 0.5 ? '600' : '400';
+                item.addEventListener('click', function() { showTagLessons(tag.name); });
                 cloud.appendChild(item);
             });
 
@@ -1634,18 +1737,107 @@
 
                 var grid = el('div', 'tag-list-grid');
                 sorted.forEach(function(tag) {
-                    var entry = el('div', 'tag-list-entry');
+                    var entry = el('div', 'tag-list-entry clickable');
                     entry.appendChild(el('span', 'tag-list-name', tag.name));
                     entry.appendChild(el('span', 'tag-list-count', String(tag.count)));
                     var bar = el('div', 'tag-list-bar');
                     bar.style.width = Math.max(5, Math.round(100 * tag.count / maxCount)) + '%';
                     entry.appendChild(bar);
+                    entry.addEventListener('click', function() { showTagLessons(tag.name); });
                     grid.appendChild(entry);
                 });
                 listSection.appendChild(grid);
             }
 
             container.appendChild(listSection);
+            body.appendChild(container);
+        }
+
+        // --- Tag Search Results ---
+        async function showTagLessons(tagName) {
+            state.showDashboard = false;
+            state.showNotesFeed = false;
+            state.showTagsPage = true;
+            state.currentFile = '__tags_page__';
+            state.currentSource = '__tags_page__';
+            updateActiveState();
+
+            var body = document.getElementById('markdown-body');
+            var meta = document.getElementById('content-meta');
+            meta.style.display = 'none';
+            body.innerHTML = '<div class="loading">Searching for tag...</div>';
+
+            try {
+                var res = await fetch('/api/lessons/by-tag/' + encodeURIComponent(tagName));
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                var data = await res.json();
+                renderTagLessons(data.tag, data.lessons);
+            } catch (err) {
+                body.innerHTML = '<div class="error">Failed to search tag: ' + err.message + '</div>';
+            }
+        }
+
+        function renderTagLessons(tagName, lessons) {
+            var body = document.getElementById('markdown-body');
+            body.innerHTML = '';
+            var container = el('div', 'dashboard');
+
+            // Header
+            var header = el('div', 'tag-results-header');
+            var titleWrap = document.createElement('div');
+            var h2 = el('h2', '', 'Lessons tagged ');
+            var badge = el('span', 'tag-results-tag', tagName);
+            h2.appendChild(badge);
+            titleWrap.appendChild(h2);
+            header.appendChild(titleWrap);
+            header.appendChild(el('span', 'tag-results-count',
+                lessons.length + ' lesson' + (lessons.length !== 1 ? 's' : '')));
+            container.appendChild(header);
+
+            // Back link
+            var backRow = el('div', '');
+            backRow.style.marginBottom = '1rem';
+            var backLink = document.createElement('a');
+            backLink.href = '#';
+            backLink.textContent = 'Back to All Tags';
+            backLink.style.cssText = 'color:var(--accent);font-size:0.85rem;';
+            backLink.addEventListener('click', function(e) { e.preventDefault(); showTagsPage(); });
+            backRow.appendChild(backLink);
+            container.appendChild(backRow);
+
+            if (lessons.length === 0) {
+                container.appendChild(el('p', '', 'No lessons found with this tag.'));
+            } else {
+                lessons.forEach(function(lesson) {
+                    var item = el('div', 'tag-result-item');
+                    item.addEventListener('click', function() { loadFile(lesson.filename, 'lesson'); });
+
+                    item.appendChild(el('span', 'tag-result-title', lesson.title));
+
+                    var metaDiv = el('div', 'tag-result-meta');
+
+                    // Show other tags as mini pills
+                    var tagsDiv = el('div', 'tag-result-tags');
+                    var otherTags = (lesson.tags || []).filter(function(t) { return t !== tagName; });
+                    otherTags.slice(0, 5).forEach(function(t) {
+                        var pill = el('span', 'mini-tag', t);
+                        pill.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            showTagLessons(t);
+                        });
+                        tagsDiv.appendChild(pill);
+                    });
+                    if (otherTags.length > 5) {
+                        tagsDiv.appendChild(el('span', 'mini-tag', '+' + (otherTags.length - 5)));
+                    }
+                    metaDiv.appendChild(tagsDiv);
+                    metaDiv.appendChild(el('span', 'tag-result-time', timeAgo(lesson.modified)));
+
+                    item.appendChild(metaDiv);
+                    container.appendChild(item);
+                });
+            }
+
             body.appendChild(container);
         }
 

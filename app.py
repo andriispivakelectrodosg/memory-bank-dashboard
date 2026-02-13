@@ -152,6 +152,37 @@ def lesson_tags():
     return jsonify({"tags": tags, "total_lessons": len(items)})
 
 
+@app.route("/api/lessons/by-tag/<tag>")
+def lessons_by_tag(tag):
+    tag = tag.strip().lower()
+    if not tag:
+        return jsonify({"tag": tag, "lessons": []})
+    items = _list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"})
+    matches = []
+    for item in items:
+        path = os.path.join(LESSONS_DIR, item["filename"])
+        content = _read_file(path)
+        if not content:
+            continue
+        tags_text = _parse_section(content, "Tags")
+        if not tags_text:
+            continue
+        file_tags = [t.strip().lower() for t in re.findall(r"`([^`]+)`", tags_text)]
+        if tag in file_tags:
+            # Extract title from first H1/H2
+            title_match = re.search(r"^##?\s+(.+)", content, re.MULTILINE)
+            title = title_match.group(1).strip() if title_match else item["label"]
+            matches.append({
+                "filename": item["filename"],
+                "label": item["label"],
+                "title": title,
+                "modified": item["modified"],
+                "tags": file_tags,
+            })
+    matches.sort(key=lambda x: x.get("modified", 0), reverse=True)
+    return jsonify({"tag": tag, "lessons": matches})
+
+
 @app.route("/api/adrs")
 def list_adrs():
     has_index = os.path.isfile(os.path.join(ADRS_DIR, "README.md"))
