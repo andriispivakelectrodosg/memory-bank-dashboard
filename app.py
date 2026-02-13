@@ -128,6 +128,30 @@ def get_lesson(filename):
     return jsonify(_safe_read(LESSONS_DIR, filename))
 
 
+@app.route("/api/lessons/tags")
+def lesson_tags():
+    items = _list_md(LESSONS_DIR, exclude={"lesson-learned-index.md"})
+    tag_counts = {}
+    for item in items:
+        path = os.path.join(LESSONS_DIR, item["filename"])
+        content = _read_file(path)
+        if not content:
+            continue
+        tags_text = _parse_section(content, "Tags")
+        if not tags_text:
+            continue
+        for tag in re.findall(r"`([^`]+)`", tags_text):
+            tag = tag.strip().lower()
+            if tag:
+                tag_counts[tag] = tag_counts.get(tag, 0) + 1
+    tags = sorted(
+        [{"name": k, "count": v} for k, v in tag_counts.items()],
+        key=lambda x: x["count"],
+        reverse=True,
+    )
+    return jsonify({"tags": tags, "total_lessons": len(items)})
+
+
 @app.route("/api/adrs")
 def list_adrs():
     has_index = os.path.isfile(os.path.join(ADRS_DIR, "README.md"))

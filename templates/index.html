@@ -525,6 +525,107 @@
         }
 
         .note-card-body { font-size: 0.92rem; }
+
+        /* Tag Distribution Chart */
+        .tag-chart-container {
+            display: flex;
+            align-items: flex-start;
+            gap: 2rem;
+            padding: 1.25rem 1.5rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .tag-chart-container h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            width: 100%;
+        }
+
+        .tag-chart-left {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .tag-chart-svg {
+            display: block;
+            transform: rotate(-90deg);
+        }
+
+        .tag-chart-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .tag-chart-center-count {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .tag-chart-center-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .tag-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .tag-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.82rem;
+            color: var(--text-primary);
+            cursor: default;
+        }
+
+        .tag-legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .tag-legend-name {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .tag-legend-count {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.78rem;
+            flex-shrink: 0;
+        }
+
+        @media (max-width: 600px) {
+            .tag-chart-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .tag-legend {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -783,7 +884,14 @@
 
                 // Linkify references
                 if (source === 'memory-bank' && filename === 'tasks/_index.md') linkifyTaskReferences(body);
-                if (source === 'lesson' && filename === 'lesson-learned-index.md') linkifyLessonReferences(body);
+                if (source === 'lesson' && filename === 'lesson-learned-index.md') {
+                    linkifyLessonReferences(body);
+                    // Fetch tag data and prepend chart
+                    fetch('/api/lessons/tags').then(function(r) { return r.json(); }).then(function(tagData) {
+                        var chart = buildTagChart(tagData.tags, tagData.total_lessons);
+                        body.prepend(chart);
+                    }).catch(function() { /* silently skip chart on error */ });
+                }
             } catch (err) {
                 body.innerHTML = '<div class="error">Failed to load ' + filename + ': ' + err.message + '</div>';
             }
@@ -1235,6 +1343,96 @@
             }
 
             return card;
+        }
+
+        // --- Tag Distribution Chart ---
+        var TAG_COLORS = [
+            '#3b82f6', '#ef4444', '#22c55e', '#f59e0b', '#8b5cf6',
+            '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+            '#6366f1', '#e11d48',
+        ];
+
+        function buildTagChart(tags, totalLessons) {
+            var container = el('div', 'tag-chart-container');
+            container.style.flexWrap = 'wrap';
+
+            var heading = el('h3', '', 'Tag Distribution');
+            container.appendChild(heading);
+
+            if (!tags || tags.length === 0) {
+                container.appendChild(el('p', '', 'No tags found in lessons.'));
+                return container;
+            }
+
+            // Top 15 tags, group rest as "Other"
+            var maxTags = 15;
+            var displayTags = tags.slice(0, maxTags);
+            var otherCount = 0;
+            for (var i = maxTags; i < tags.length; i++) {
+                otherCount += tags[i].count;
+            }
+            if (otherCount > 0) {
+                displayTags.push({ name: 'other', count: otherCount });
+            }
+
+            // Total tag occurrences (for arc proportions)
+            var totalOccurrences = 0;
+            displayTags.forEach(function(t) { totalOccurrences += t.count; });
+
+            // SVG donut chart
+            var svgSize = 200;
+            var radius = 80;
+            var strokeWidth = 30;
+            var circumference = 2 * Math.PI * radius;
+
+            var svgNS = 'http://www.w3.org/2000/svg';
+            var svg = document.createElementNS(svgNS, 'svg');
+            svg.setAttribute('width', svgSize);
+            svg.setAttribute('height', svgSize);
+            svg.setAttribute('viewBox', '0 0 ' + svgSize + ' ' + svgSize);
+            svg.setAttribute('class', 'tag-chart-svg');
+
+            var offset = 0;
+            displayTags.forEach(function(tag, idx) {
+                var segLen = (tag.count / totalOccurrences) * circumference;
+                var circle = document.createElementNS(svgNS, 'circle');
+                circle.setAttribute('cx', svgSize / 2);
+                circle.setAttribute('cy', svgSize / 2);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('fill', 'none');
+                circle.setAttribute('stroke', TAG_COLORS[idx % TAG_COLORS.length]);
+                circle.setAttribute('stroke-width', strokeWidth);
+                circle.setAttribute('stroke-dasharray', segLen + ' ' + (circumference - segLen));
+                circle.setAttribute('stroke-dashoffset', -offset);
+                svg.appendChild(circle);
+                offset += segLen;
+            });
+
+            var chartLeft = el('div', 'tag-chart-left');
+            chartLeft.appendChild(svg);
+
+            // Center label
+            var center = el('div', 'tag-chart-center');
+            center.appendChild(el('div', 'tag-chart-center-count', String(totalLessons)));
+            center.appendChild(el('div', 'tag-chart-center-label', 'lessons'));
+            chartLeft.appendChild(center);
+
+            container.appendChild(chartLeft);
+
+            // Legend
+            var legend = el('div', 'tag-legend');
+            displayTags.forEach(function(tag, idx) {
+                var item = el('div', 'tag-legend-item');
+                var dot = el('span', 'tag-legend-dot');
+                dot.style.backgroundColor = TAG_COLORS[idx % TAG_COLORS.length];
+                item.appendChild(dot);
+                item.appendChild(el('span', 'tag-legend-name', tag.name));
+                item.appendChild(el('span', 'tag-legend-count', String(tag.count)));
+                legend.appendChild(item);
+            });
+            container.appendChild(legend);
+
+            return container;
         }
 
         function buildRecentCard(files) {
